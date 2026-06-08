@@ -1,4 +1,5 @@
 use crate::block::Block;
+use crate::transaction::Transaction;
 
 #[derive(Debug)]
 pub struct Blockchain {
@@ -17,18 +18,22 @@ impl Blockchain {
     fn genesis_block(difficulty: usize) -> Block {
         Block::new(
             0,
-            "Genesis Block".to_string(),
+            vec![],
+            // "Genesis Block".to_string(),
             "0".to_string(),
             difficulty,
         )
     }
 
-    pub fn add_block(&mut self, data: String)  {
+    pub fn add_block(
+        &mut self,
+        transactions: Vec<Transaction>,
+        )  {
         let previous_block = self.chain.last().expect("A blockchain should have its genesis block.");
 
         let new_block = Block::new(
             previous_block.index + 1,
-            data,
+            transactions,
             previous_block.hash.clone(),
             self.difficulty,
         );
