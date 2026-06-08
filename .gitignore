@@ -1,1 +1,19 @@
-/target
+# Rust build artifacts
+target/
+
+# Rust lock file (keep for binary apps)
+# Cargo.lock
+
+# Vim
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# JetBrains
+.idea/
