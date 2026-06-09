@@ -210,5 +210,4 @@ Any errors, omissions, or simplifications are solely the responsibility of the a
 
 ## License
 
-This project is provided for educational and research purposes.
-
+Released under the MIT License.
