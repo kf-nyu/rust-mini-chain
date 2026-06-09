@@ -25,16 +25,33 @@ fn main() {
     let difficulty = 4; //Added by Step 2
     let mut blockchain = Blockchain::new(difficulty);
 
-    let tx1 = Transaction {
+    let mut tx1 = Transaction {
         from: "Alice".to_string(),
         to:     "Bob".to_string(),
         amount: 10,
+        signature: None,
     };
+    
+    tx1.sign(&alice.signing_key);
+
+    println!(
+        "Valid Signature: {}",
+        tx1.verify(&alice.verifying_key)
+    );
+
+    tx1.amount = 1000;
+
+    println!(
+        "Valid Signature: {}",
+        tx1.verify(&alice.verifying_key)
+    );
+
 
     let tx2 = Transaction {
         from: "Bob".to_string(),
         to: "Carol".to_string(),
         amount: 5,
+        signature: None,
     };
 
     blockchain.add_block(vec![tx1]);
