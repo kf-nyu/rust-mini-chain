@@ -29,30 +29,25 @@ fn main() {
         from: "Alice".to_string(),
         to:     "Bob".to_string(),
         amount: 10,
+        sender_public_key: alice.public_key_hex(),
         signature: None,
     };
     
     tx1.sign(&alice.signing_key);
 
-    println!(
-        "Valid Signature: {}",
-        tx1.verify(&alice.verifying_key)
-    );
+    println!("Valid Signature: {}",tx1.verify());
 
-    tx1.amount = 1000;
-
-    println!(
-        "Valid Signature: {}",
-        tx1.verify(&alice.verifying_key)
-    );
-
-
-    let tx2 = Transaction {
+    let mut tx2 = Transaction {
         from: "Bob".to_string(),
         to: "Carol".to_string(),
         amount: 5,
+        sender_public_key: bob.public_key_hex(),
         signature: None,
     };
+    
+    tx2.sign(&bob.signing_key);
+
+    println!("Valid Signature: {}",tx2.verify());
 
     blockchain.add_block(vec![tx1]);
     blockchain.add_block(vec![tx2]);

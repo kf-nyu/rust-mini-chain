@@ -60,7 +60,13 @@ impl Blockchain {
             if current.previous_hash != previous.hash {
                 return false;
             }
-        }
+
+            for transaction in &current.transactions {
+                if !transaction.verify() {
+                    return false;
+                }
+            }
+}
 
         true
     }
