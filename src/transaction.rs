@@ -1,16 +1,10 @@
-use ed25519_dalek::{
-    Signature,
-    Signer,
-    Verifier,
-    SigningKey,
-    VerifyingKey,
-};
-    use serde::{Deserialize, Serialize};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
-    pub from:   String,
-    pub to:     String,
+    pub from: String,
+    pub to: String,
     pub amount: u64,
     pub sender_public_key: String,
     #[serde(skip)]
@@ -21,10 +15,7 @@ impl Transaction {
     fn message(&self) -> String {
         format!(
             "{}{}{}{}",
-            self.from,
-            self.to,
-            self.amount,
-            self.sender_public_key
+            self.from, self.to, self.amount, self.sender_public_key
         )
     }
 

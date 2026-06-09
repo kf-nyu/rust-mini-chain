@@ -25,11 +25,11 @@ impl Blockchain {
         )
     }
 
-    pub fn add_block(
-        &mut self,
-        transactions: Vec<Transaction>,
-        )  {
-        let previous_block = self.chain.last().expect("A blockchain should have its genesis block.");
+    pub fn add_block(&mut self, transactions: Vec<Transaction>) {
+        let previous_block = self
+            .chain
+            .last()
+            .expect("A blockchain should have its genesis block.");
 
         let new_block = Block::new(
             previous_block.index + 1,
@@ -46,7 +46,7 @@ impl Blockchain {
         let target = "0".repeat(self.difficulty);
 
         for i in 1..self.chain.len() {
-            let current  = &self.chain[i];
+            let current = &self.chain[i];
             let previous = &self.chain[i - 1];
 
             if current.hash != current.calculate_hash() {
@@ -66,7 +66,7 @@ impl Blockchain {
                     return false;
                 }
             }
-}
+        }
 
         true
     }

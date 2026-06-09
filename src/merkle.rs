@@ -12,13 +12,9 @@ pub fn merkle_root(transactions: &[String]) -> String {
         return hash("");
     }
 
-    let mut hashes: Vec<String> =
-        transactions.iter()
-            .map(|tx| hash(tx))
-            .collect();
+    let mut hashes: Vec<String> = transactions.iter().map(|tx| hash(tx)).collect();
 
     while hashes.len() > 1 {
-
         if hashes.len() % 2 == 1 {
             let last = hashes.last().unwrap().clone();
             hashes.push(last);
@@ -26,9 +22,9 @@ pub fn merkle_root(transactions: &[String]) -> String {
 
         hashes = hashes
             .chunks(2)
-            .map(|pair| {  //hash(&format!("{}{}", pair[0],pair[1])
-                let combined =
-                    format!("{}{}", pair[0], pair[1]);
+            .map(|pair| {
+                //hash(&format!("{}{}", pair[0],pair[1])
+                let combined = format!("{}{}", pair[0], pair[1]);
                 hash(&combined)
             })
             .collect();
