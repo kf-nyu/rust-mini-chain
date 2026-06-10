@@ -1,9 +1,9 @@
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::network;
 use rust_mini_chain::transaction::Transaction;
-use rust_mini_chain::wallet::Wallet;
 use rust_mini_chain::tx_input::TxInput;
 use rust_mini_chain::tx_output::TxOutput;
+use rust_mini_chain::wallet::Wallet;
 use std::time::Instant;
 
 fn main() {
@@ -23,27 +23,26 @@ fn main() {
         let alice = Wallet::new();
         let bob = Wallet::new();
 
-       // let mut tx = Transaction {
-       //     from: "Alice".to_string(),
-       //     to: "Bob".to_string(),
-       //     amount: 10,
-       //     sender_public_key: alice.public_key_hex(),
-       //     signature: None,
-       // };
+        // let mut tx = Transaction {
+        //     from: "Alice".to_string(),
+        //     to: "Bob".to_string(),
+        //     amount: 10,
+        //     sender_public_key: alice.public_key_hex(),
+        //     signature: None,
+        // };
 
-    let mut tx = Transaction::new(
-        vec![TxInput {
-            previous_tx_id: "genesis".to_string(),
-            output_index: 0,
-            sender_public_key: alice.public_key_hex(),
-            signature: None,
-        }],
-        vec![TxOutput {
-            recipient: bob.public_key_hex(),
-            amount: 10,
-        }],
-
-    );
+        let mut tx = Transaction::new(
+            vec![TxInput {
+                previous_tx_id: "genesis".to_string(),
+                output_index: 0,
+                sender_public_key: alice.public_key_hex(),
+                signature: None,
+            }],
+            vec![TxOutput {
+                recipient: bob.public_key_hex(),
+                amount: 10,
+            }],
+        );
         tx.sign(&alice.signing_key);
 
         blockchain.add_block(vec![tx]);

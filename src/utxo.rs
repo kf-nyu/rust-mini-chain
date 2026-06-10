@@ -30,20 +30,12 @@ impl UTXOSet {
         }
     }
 
-    pub fn find_output(
-        &self,
-        tx_id: &str,
-        output_index: usize,
-    ) -> Option<&TxOutput> {
+    pub fn find_output(&self, tx_id: &str, output_index: usize) -> Option<&TxOutput> {
         let key = Self::key(tx_id, output_index);
         self.outputs.get(&key)
     }
 
-    pub fn contains(
-        &self,
-        tx_id: &str,
-        output_index: usize,
-    ) -> bool {
+    pub fn contains(&self, tx_id: &str, output_index: usize) -> bool {
         self.find_output(tx_id, output_index).is_some()
     }
 
@@ -54,5 +46,30 @@ impl UTXOSet {
             .map(|output| output.amount)
             .sum()
     }
-}
 
+    pub fn validate_transaction(&self, transaction: &Transaction) -> bool {
+        //Coinbase-style transaction: creates initial coins.
+        //We keep this simple for the prototype.
+        if transaction.inputs.is_empty() {
+            return true;
+        }
+
+        if !transaction.verify() {
+            return false;
+        }
+
+        let mut input_total = 0;
+
+        for input in &transaction.inputs {
+            let Some(output) = self.find_output(&input.previous_tx_id, input.output_index) else {
+                return false;
+            };
+
+            input_total += output.amount;
+        }
+
+        let output_total: u64 = transaction.outputs.iter().map(|output| output.amount).sum();
+
+        input_total >= output_total
+    }
+}

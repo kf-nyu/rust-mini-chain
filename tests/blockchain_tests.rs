@@ -1,11 +1,9 @@
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::transaction::Transaction;
-use rust_mini_chain::wallet::Wallet;
 use rust_mini_chain::tx_input::TxInput;
 use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::utxo::UTXOSet;
-
-
+use rust_mini_chain::wallet::Wallet;
 
 fn signed_transaction(
     previous_tx_id: &str,
@@ -67,7 +65,7 @@ fn tampered_transaction_fails_validation() {
 #[test]
 fn tampered_previous_hash_fails_validation() {
     let alice = Wallet::new();
-    let bob  = Wallet::new();
+    let bob = Wallet::new();
 
     let tx = signed_transaction("genesis", 0, &alice, &bob, 10);
 
@@ -106,4 +104,108 @@ fn utxo_set_tracks_unspent_outputs() {
 
     assert!(utxo_set.contains(&tx.id, 0));
     assert_eq!(utxo_set.balance_of(&bob.public_key_hex()), 10);
+}
+
+#[test]
+fn utxo_validation_accepts_valid_spend() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut utxo_set = UTXOSet::new();
+    utxo_set.add_transaction(&coinbase);
+
+    let mut spend = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: coinbase.id.clone(),
+            output_index: 0,
+            sender_public_key: alice.public_key_hex(),
+            signature: None,
+        }],
+        vec![
+            TxOutput {
+                recipient: bob.public_key_hex(),
+                amount: 10,
+            },
+            TxOutput {
+                recipient: alice.public_key_hex(),
+                amount: 40,
+            },
+        ],
+    );
+
+    spend.sign(&alice.signing_key);
+
+    assert!(utxo_set.validate_transaction(&spend));
+
+    utxo_set.add_transaction(&spend);
+
+    assert_eq!(utxo_set.balance_of(&bob.public_key_hex()), 10);
+    assert_eq!(utxo_set.balance_of(&alice.public_key_hex()), 40);
+}
+
+#[test]
+fn utxo_validation_rejects_nonexistent_input() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let mut spend = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: "missing".to_string(),
+            output_index: 0,
+            sender_public_key: alice.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 10,
+        }],
+    );
+
+    spend.sign(&alice.signing_key);
+
+    let utxo_set = UTXOSet::new();
+
+    assert!(!utxo_set.validate_transaction(&spend));
+}
+
+#[test]
+fn utxo_validation_rejects_overspending() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut utxo_set = UTXOSet::new();
+    utxo_set.add_transaction(&coinbase);
+
+    let mut spend = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: coinbase.id.clone(),
+            output_index: 0,
+            sender_public_key: alice.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 100,
+        }],
+    );
+
+    spend.sign(&alice.signing_key);
+
+    assert!(!utxo_set.validate_transaction(&spend));
 }

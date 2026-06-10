@@ -15,7 +15,7 @@ pub struct Transaction {
     // v2.0:UTXO
     pub id: String,
     pub inputs: Vec<TxInput>,
-    pub outputs:Vec<TxOutput>,
+    pub outputs: Vec<TxOutput>,
 }
 
 impl Transaction {
@@ -25,7 +25,7 @@ impl Transaction {
             inputs,
             outputs,
         };
-        
+
         transaction.id = transaction.calculate_hash();
         transaction
     }
@@ -67,7 +67,7 @@ impl Transaction {
 
     pub fn sign(&mut self, signing_key: &SigningKey) {
         let signature = signing_key.sign(self.message().as_bytes());
-        let signature_hex  = hex::encode(signature.to_bytes());
+        let signature_hex = hex::encode(signature.to_bytes());
 
         for input in &mut self.inputs {
             input.signature = Some(signature_hex.clone());
@@ -84,7 +84,6 @@ impl Transaction {
         }
 
         for input in &self.inputs {
-
             let Some(signature_hex) = &input.signature else {
                 return false;
             };
@@ -120,6 +119,5 @@ impl Transaction {
         }
 
         true
-
     }
 }
