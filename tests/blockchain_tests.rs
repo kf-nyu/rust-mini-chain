@@ -3,6 +3,7 @@ use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::wallet::Wallet;
 use rust_mini_chain::tx_input::TxInput;
 use rust_mini_chain::tx_output::TxOutput;
+use rust_mini_chain::utxo::UTXOSet;
 
 
 
@@ -91,4 +92,18 @@ fn tampered_block_hash_fails_validation() {
     blockchain.chain[1].hash = "bad_hash".to_string();
 
     assert!(!blockchain.is_valid());
+}
+
+#[test]
+fn utxo_set_tracks_unspent_outputs() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let tx = signed_transaction("genesis", 0, &alice, &bob, 10);
+
+    let mut utxo_set = UTXOSet::new();
+    utxo_set.add_transaction(&tx);
+
+    assert!(utxo_set.contains(&tx.id, 0));
+    assert_eq!(utxo_set.balance_of(&bob.public_key_hex()), 10);
 }
