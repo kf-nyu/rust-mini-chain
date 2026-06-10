@@ -3,4 +3,7 @@ pub mod blockchain;
 pub mod merkle;
 pub mod network;
 pub mod transaction;
+pub mod tx_input;
+pub mod tx_output;
+pub mod utxo;
 pub mod wallet;
