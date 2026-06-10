@@ -65,6 +65,10 @@ impl UTXOSet {
                 return false;
             };
 
+            if output.recipient != input.sender_public_key {
+                return false;
+            }
+
             input_total += output.amount;
         }
 

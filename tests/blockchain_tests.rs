@@ -209,3 +209,38 @@ fn utxo_validation_rejects_overspending() {
 
     assert!(!utxo_set.validate_transaction(&spend));
 }
+
+#[test]
+fn utxo_validation_rejects_wrong_owner() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+    let mallory = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut utxo_set = UTXOSet::new();
+    utxo_set.add_transaction(&coinbase);
+
+    let mut spend = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: coinbase.id.clone(),
+            output_index: 0,
+            sender_public_key: mallory.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 10,
+        }],
+    );
+
+    spend.sign(&mallory.signing_key);
+
+    assert!(!utxo_set.validate_transaction(&spend));
+}
