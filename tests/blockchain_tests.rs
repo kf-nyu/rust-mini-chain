@@ -1,17 +1,32 @@
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::wallet::Wallet;
+use rust_mini_chain::tx_input::TxInput;
+use rust_mini_chain::tx_output::TxOutput;
 
-fn signed_transaction(from: &str, to: &str, amount: u64, wallet: &Wallet) -> Transaction {
-    let mut tx = Transaction {
-        from: from.to_string(),
-        to: to.to_string(),
-        amount,
-        sender_public_key: wallet.public_key_hex(),
-        signature: None,
-    };
 
-    tx.sign(&wallet.signing_key);
+
+fn signed_transaction(
+    previous_tx_id: &str,
+    output_index: usize,
+    sender: &Wallet,
+    recipient: &Wallet,
+    amount: u64,
+) -> Transaction {
+    let mut tx = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: previous_tx_id.to_string(),
+            output_index,
+            sender_public_key: sender.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: recipient.public_key_hex(),
+            amount,
+        }],
+    );
+
+    tx.sign(&sender.signing_key);
     tx
 }
 
@@ -19,9 +34,10 @@ fn signed_transaction(from: &str, to: &str, amount: u64, wallet: &Wallet) -> Tra
 fn valid_blockchain_passes_validation() {
     let alice = Wallet::new();
     let bob = Wallet::new();
+    let carol = Wallet::new();
 
-    let tx1 = signed_transaction("Alice", "Bob", 10, &alice);
-    let tx2 = signed_transaction("Bob", "Carol", 5, &bob);
+    let tx1 = signed_transaction("genesis", 0, &alice, &bob, 10);
+    let tx2 = signed_transaction(&tx1.id, 0, &bob, &carol, 5);
 
     let mut blockchain = Blockchain::new(4);
     blockchain.add_block(vec![tx1]);
@@ -33,12 +49,13 @@ fn valid_blockchain_passes_validation() {
 #[test]
 fn tampered_transaction_fails_validation() {
     let alice = Wallet::new();
+    let bob = Wallet::new();
 
-    let mut tx = signed_transaction("Alice", "Bob", 10, &alice);
+    let mut tx = signed_transaction("genesis", 0, &alice, &bob, 10);
 
     //Tempering after signed the transaction
     // Change the amount from 10 -> 1000
-    tx.amount = 1000;
+    tx.outputs[0].amount = 1000;
 
     let mut blockchain = Blockchain::new(4);
     blockchain.add_block(vec![tx]);
@@ -49,8 +66,9 @@ fn tampered_transaction_fails_validation() {
 #[test]
 fn tampered_previous_hash_fails_validation() {
     let alice = Wallet::new();
+    let bob  = Wallet::new();
 
-    let tx = signed_transaction("Alice", "Bob", 10, &alice);
+    let tx = signed_transaction("genesis", 0, &alice, &bob, 10);
 
     let mut blockchain = Blockchain::new(4);
     blockchain.add_block(vec![tx]);
@@ -63,8 +81,9 @@ fn tampered_previous_hash_fails_validation() {
 #[test]
 fn tampered_block_hash_fails_validation() {
     let alice = Wallet::new();
+    let bob = Wallet::new();
 
-    let tx = signed_transaction("Alice", "Bob", 10, &alice);
+    let tx = signed_transaction("genesis", 0, &alice, &bob, 10);
 
     let mut blockchain = Blockchain::new(4);
     blockchain.add_block(vec![tx]);
