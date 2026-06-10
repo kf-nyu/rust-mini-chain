@@ -7,8 +7,8 @@ pub struct Transaction {
     pub to: String,
     pub amount: u64,
     pub sender_public_key: String,
-    #[serde(skip)]
-    pub signature: Option<Signature>,
+    // #[serde(skip)] changed from Option<Signature>
+    pub signature: Option<String>,
 }
 
 impl Transaction {
@@ -21,13 +21,23 @@ impl Transaction {
 
     pub fn sign(&mut self, signing_key: &SigningKey) {
         let signature = signing_key.sign(self.message().as_bytes());
-        self.signature = Some(signature);
+        self.signature = Some(hex::encode(signature.to_bytes()));
     }
 
     pub fn verify(&self) -> bool {
-        let Some(signature) = &self.signature else {
+        let Some(signature_hex) = &self.signature else {
             return false;
         };
+
+        let Ok(signature_bytes) = hex::decode(signature_hex) else {
+            return false;
+        };
+
+        let Ok(signature_array) = signature_bytes.try_into() else {
+            return false;
+        };
+
+        let signature = Signature::from_bytes(&signature_array);
 
         let Ok(public_key_bytes) = hex::decode(&self.sender_public_key) else {
             return false;
@@ -42,7 +52,7 @@ impl Transaction {
         };
 
         verifying_key
-            .verify(self.message().as_bytes(), signature)
+            .verify(self.message().as_bytes(), &signature)
             .is_ok()
     }
 }

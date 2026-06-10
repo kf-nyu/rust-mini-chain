@@ -21,6 +21,14 @@ pub fn start_node(port: u16) {
         println!("Previous hash: {}", block.previous_hash);
         println!("Merkle root: {}", block.merkle_root);
         println!("Transactions: {}", block.transactions.len());
+
+        let difficulty = 4;
+
+        if block.is_valid(difficulty) {
+            println!("Block validation: accepted");
+        } else {
+            println!("Block validation: rejected");
+        }
     }
 }
 

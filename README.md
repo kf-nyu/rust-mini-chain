@@ -1,6 +1,6 @@
 # Rust Mini Chain
 
-A simple educational blockchain implementation written in Rust.
+A simple prototype blockchain implementation written in Rust.
 
 This project was developed to explore the fundamental building blocks of blockchain systems while deepening practical experience with Rust. The implementation focuses on cryptographic integrity, transaction validation, Merkle trees, proof-of-work mining, and blockchain verification.
 
@@ -17,7 +17,18 @@ This project was developed to explore the fundamental building blocks of blockch
 * Merkle root calculation
 * Blockchain integrity validation
 * Tamper-detection tests
+* TCP networking and block propagation
+* Validation of received blocks before acceptance
 * Modular Rust project structure
+---
+
+## Recent Updates
+
+### v1.1
+
+- Added validation of received blocks over TCP
+- Serialized transaction signatures for network transmission
+- Rejects invalid or tampered blocks before acceptance
 
 ---
 
@@ -144,9 +155,9 @@ Current integration tests verify:
 
 ---
 
-## Educational Scope
+## Prototype Scope
 
-This repository is intentionally designed as an educational blockchain implementation.
+This repository is intentionally designed as a prototype blockchain implementation.
 
 The goal is to demonstrate core concepts including:
 
@@ -161,8 +172,9 @@ The goal is to demonstrate core concepts including:
 
 This project is **not intended for production use** and does not currently implement:
 
-* Peer-to-peer networking
-* Distributed consensus
+* Peer-to-peer networking protocols
+* Peer discovery
+* Multi-node consensus
 * Mempools
 * Persistent storage
 * Smart contracts

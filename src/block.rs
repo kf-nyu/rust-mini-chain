@@ -84,4 +84,24 @@ impl Block {
             self.hash
         );
     }
+
+    pub fn is_valid(&self, difficulty: usize) -> bool {
+        let target = "0".repeat(difficulty);
+
+        if self.hash != self.calculate_hash() {
+            return false;
+        }
+
+        if !self.hash.starts_with(&target) {
+            return false;
+        }
+
+        for transaction in &self.transactions {
+            if !transaction.verify() {
+                return false;
+            }
+        }
+
+        true
+    }
 }
