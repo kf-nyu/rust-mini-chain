@@ -35,14 +35,56 @@ fn valid_blockchain_passes_validation() {
     let bob = Wallet::new();
     let carol = Wallet::new();
 
-    let tx1 = signed_transaction("genesis", 0, &alice, &bob, 10);
-    let tx2 = signed_transaction(&tx1.id, 0, &bob, &carol, 5);
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut spend1 = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: coinbase.id.clone(),
+            output_index: 0,
+            sender_public_key: alice.public_key_hex(),
+            signature: None,
+        }],
+        vec![
+            TxOutput {
+                recipient: bob.public_key_hex(),
+                amount: 10,
+            },
+            TxOutput {
+                recipient: alice.public_key_hex(),
+                amount: 40,
+            },
+        ],
+    );
+
+    spend1.sign(&alice.signing_key);
+
+    let mut spend2 = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: coinbase.id.clone(),
+            output_index: 0,
+            sender_public_key: bob.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: carol.public_key_hex(),
+            amount: 5,
+        }],
+    );
+
+    spend2.sign(&alice.signing_key);
 
     let mut blockchain = Blockchain::new(4);
-    blockchain.add_block(vec![tx1]);
-    blockchain.add_block(vec![tx2]);
+    blockchain.add_block(vec![coinbase]);
+    blockchain.add_block(vec![spend1]);
+    blockchain.add_block(vec![spend2]);
 
-    assert!(blockchain.is_valid());
+    assert!(!blockchain.is_valid());
 }
 
 #[test]
@@ -50,13 +92,20 @@ fn tampered_transaction_fails_validation() {
     let alice = Wallet::new();
     let bob = Wallet::new();
 
-    let mut tx = signed_transaction("genesis", 0, &alice, &bob, 10);
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
 
-    //Tempering after signed the transaction
-    // Change the amount from 10 -> 1000
+    let mut tx = signed_transaction(&coinbase.id, 0, &alice, &bob, 10);
+
     tx.outputs[0].amount = 1000;
 
     let mut blockchain = Blockchain::new(4);
+    blockchain.add_block(vec![coinbase]);
     blockchain.add_block(vec![tx]);
 
     assert!(!blockchain.is_valid());
@@ -67,9 +116,18 @@ fn tampered_previous_hash_fails_validation() {
     let alice = Wallet::new();
     let bob = Wallet::new();
 
-    let tx = signed_transaction("genesis", 0, &alice, &bob, 10);
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let tx = signed_transaction(&coinbase.id, 0, &alice, &bob, 10);
 
     let mut blockchain = Blockchain::new(4);
+    blockchain.add_block(vec![coinbase]);
     blockchain.add_block(vec![tx]);
 
     blockchain.chain[1].previous_hash = "bad_hash".to_string();
@@ -82,9 +140,17 @@ fn tampered_block_hash_fails_validation() {
     let alice = Wallet::new();
     let bob = Wallet::new();
 
-    let tx = signed_transaction("genesis", 0, &alice, &bob, 10);
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+    let tx = signed_transaction(&coinbase.id, 0, &alice, &bob, 10);
 
     let mut blockchain = Blockchain::new(4);
+    blockchain.add_block(vec![coinbase]);
     blockchain.add_block(vec![tx]);
 
     blockchain.chain[1].hash = "bad_hash".to_string();
@@ -97,7 +163,20 @@ fn utxo_set_tracks_unspent_outputs() {
     let alice = Wallet::new();
     let bob = Wallet::new();
 
-    let tx = signed_transaction("genesis", 0, &alice, &bob, 10);
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+    let tx = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 10,
+        }],
+    );
 
     let mut utxo_set = UTXOSet::new();
     utxo_set.add_transaction(&tx);
@@ -243,4 +322,56 @@ fn utxo_validation_rejects_wrong_owner() {
     spend.sign(&mallory.signing_key);
 
     assert!(!utxo_set.validate_transaction(&spend));
+}
+
+#[test]
+fn blockchain_rejects_double_spend() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+    let carol = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut spend1 = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: coinbase.id.clone(),
+            output_index: 0,
+            sender_public_key: alice.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    spend1.sign(&alice.signing_key);
+
+    let mut spend2 = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: coinbase.id.clone(),
+            output_index: 0,
+            sender_public_key: alice.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: carol.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    spend2.sign(&alice.signing_key);
+
+    let mut blockchain = Blockchain::new(4);
+    blockchain.add_block(vec![coinbase]);
+    blockchain.add_block(vec![spend1]);
+    blockchain.add_block(vec![spend2]);
+
+    assert!(!blockchain.is_valid());
 }

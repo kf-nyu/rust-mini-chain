@@ -1,5 +1,6 @@
 use crate::block::Block;
 use crate::transaction::Transaction;
+use crate::utxo::UTXOSet;
 
 #[derive(Debug)]
 pub struct Blockchain {
@@ -43,11 +44,15 @@ impl Blockchain {
     // Hash validation from 2nd block to the latest block for no break.
     // Assume all block has the same difficulty.
     pub fn is_valid(&self) -> bool {
-        let target = "0".repeat(self.difficulty);
+        if self.chain.is_empty() {
+            return false;
+        }
 
-        for i in 1..self.chain.len() {
+        let target = "0".repeat(self.difficulty);
+        let mut utxo_set = UTXOSet::new();
+
+        for i in 0..self.chain.len() {
             let current = &self.chain[i];
-            let previous = &self.chain[i - 1];
 
             if current.hash != current.calculate_hash() {
                 return false;
@@ -57,14 +62,20 @@ impl Blockchain {
                 return false;
             }
 
-            if current.previous_hash != previous.hash {
-                return false;
+            if i > 0 {
+                let previous = &self.chain[i - 1];
+
+                if current.previous_hash != previous.hash {
+                    return false;
+                }
             }
 
             for transaction in &current.transactions {
-                if !transaction.verify() {
+                if !utxo_set.validate_transaction(transaction) {
                     return false;
                 }
+
+                utxo_set.add_transaction(transaction);
             }
         }
 
