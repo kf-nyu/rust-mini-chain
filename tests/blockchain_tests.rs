@@ -375,3 +375,34 @@ fn blockchain_rejects_double_spend() {
 
     assert!(!blockchain.is_valid());
 }
+
+#[test]
+fn utxo_spend_helper_creates_change_output() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let tx = Transaction::new_utxo_spend(
+        coinbase.id.clone(),
+        0,
+        alice.public_key_hex(),
+        bob.public_key_hex(),
+        10,
+        alice.public_key_hex(),
+        40,
+    );
+
+    assert_eq!(tx.inputs.len(), 1);
+    assert_eq!(tx.outputs.len(), 2);
+    assert_eq!(tx.outputs[0].recipient, bob.public_key_hex());
+    assert_eq!(tx.outputs[0].amount, 10);
+    assert_eq!(tx.outputs[1].recipient, alice.public_key_hex());
+    assert_eq!(tx.outputs[1].amount, 40);
+}

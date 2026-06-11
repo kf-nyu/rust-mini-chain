@@ -120,4 +120,33 @@ impl Transaction {
 
         true
     }
+
+    pub fn new_utxo_spend(
+        previous_tx_id: String,
+        output_index: usize,
+        sender_public_key: String,
+        recipient: String,
+        amount: u64,
+        change_recipient: String,
+        change_amount: u64,
+    ) -> Self {
+        let mut outputs = vec![TxOutput { recipient, amount }];
+
+        if change_amount > 0 {
+            outputs.push(TxOutput {
+                recipient: change_recipient,
+                amount: change_amount,
+            });
+        }
+
+        Self::new(
+            vec![TxInput {
+                previous_tx_id,
+                output_index,
+                sender_public_key,
+                signature: None,
+            }],
+            outputs,
+        )
+    }
 }
