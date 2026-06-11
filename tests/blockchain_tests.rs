@@ -160,16 +160,16 @@ fn tampered_block_hash_fails_validation() {
 
 #[test]
 fn utxo_set_tracks_unspent_outputs() {
-    let alice = Wallet::new();
+    //let alice = Wallet::new();
     let bob = Wallet::new();
 
-    let coinbase = Transaction::new(
-        vec![],
-        vec![TxOutput {
-            recipient: alice.public_key_hex(),
-            amount: 50,
-        }],
-    );
+    //let coinbase = Transaction::new(
+    //    vec![],
+    //    vec![TxOutput {
+    //        recipient: alice.public_key_hex(),
+    //        amount: 50,
+    //    }],
+    //);
     let tx = Transaction::new(
         vec![],
         vec![TxOutput {
@@ -405,4 +405,147 @@ fn utxo_spend_helper_creates_change_output() {
     assert_eq!(tx.outputs[0].amount, 10);
     assert_eq!(tx.outputs[1].recipient, alice.public_key_hex());
     assert_eq!(tx.outputs[1].amount, 40);
+}
+
+#[test]
+fn change_output_can_be_spent() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+    let carol = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut spend1 = Transaction::new_utxo_spend(
+        coinbase.id.clone(),
+        0,
+        alice.public_key_hex(),
+        bob.public_key_hex(),
+        10,
+        alice.public_key_hex(),
+        40,
+    );
+
+    spend1.sign(&alice.signing_key);
+
+    let mut spend2 = Transaction::new_utxo_spend(
+        spend1.id.clone(),
+        1, //Alice's change output
+        alice.public_key_hex(),
+        carol.public_key_hex(),
+        20,
+        alice.public_key_hex(),
+        20,
+    );
+
+    spend2.sign(&alice.signing_key);
+
+    let mut blockchain = Blockchain::new(4);
+    blockchain.add_block(vec![coinbase]);
+    blockchain.add_block(vec![spend1]);
+    blockchain.add_block(vec![spend2]);
+
+    assert!(blockchain.is_valid());
+}
+
+#[test]
+fn reused_change_output_is_rejected() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+    let carol = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut spend1 = Transaction::new_utxo_spend(
+        coinbase.id.clone(),
+        0,
+        alice.public_key_hex(),
+        bob.public_key_hex(),
+        10,
+        alice.public_key_hex(),
+        40,
+    );
+
+    spend1.sign(&alice.signing_key);
+
+    let mut spend2 = Transaction::new_utxo_spend(
+        spend1.id.clone(),
+        1,
+        alice.public_key_hex(),
+        carol.public_key_hex(),
+        20,
+        alice.public_key_hex(),
+        20,
+    );
+
+    spend2.sign(&alice.signing_key);
+
+    let mut spend3 = Transaction::new_utxo_spend(
+        spend1.id.clone(),
+        1,
+        alice.public_key_hex(),
+        carol.public_key_hex(),
+        5,
+        alice.public_key_hex(),
+        35,
+    );
+
+    spend3.sign(&alice.signing_key);
+
+    let mut blockchain = Blockchain::new(4);
+    blockchain.add_block(vec![coinbase]);
+    blockchain.add_block(vec![spend1]);
+    blockchain.add_block(vec![spend2]);
+    blockchain.add_block(vec![spend3]);
+
+    assert!(!blockchain.is_valid());
+}
+
+#[test]
+fn utxo_balance_updates_after_spend() {
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut utxo_set = UTXOSet::new();
+
+    utxo_set.add_transaction(&coinbase);
+
+    assert_eq!(utxo_set.balance_of(&alice.public_key_hex()), 50);
+
+    let mut spend = Transaction::new_utxo_spend(
+        coinbase.id.clone(),
+        0,
+        alice.public_key_hex(),
+        bob.public_key_hex(),
+        10,
+        alice.public_key_hex(),
+        40,
+    );
+
+    spend.sign(&alice.signing_key);
+
+    utxo_set.add_transaction(&spend);
+
+    assert_eq!(utxo_set.balance_of(&bob.public_key_hex()), 10);
+
+    assert_eq!(utxo_set.balance_of(&alice.public_key_hex()), 40);
 }
