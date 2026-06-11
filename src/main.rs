@@ -1,7 +1,6 @@
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::network;
 use rust_mini_chain::transaction::Transaction;
-use rust_mini_chain::tx_input::TxInput;
 use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::wallet::Wallet;
 use std::time::Instant;
@@ -23,29 +22,27 @@ fn main() {
         let alice = Wallet::new();
         let bob = Wallet::new();
 
-        // let mut tx = Transaction {
-        //     from: "Alice".to_string(),
-        //     to: "Bob".to_string(),
-        //     amount: 10,
-        //     sender_public_key: alice.public_key_hex(),
-        //     signature: None,
-        // };
-
-        let mut tx = Transaction::new(
-            vec![TxInput {
-                previous_tx_id: "genesis".to_string(),
-                output_index: 0,
-                sender_public_key: alice.public_key_hex(),
-                signature: None,
-            }],
+        let coinbase = Transaction::new(
+            vec![],
             vec![TxOutput {
-                recipient: bob.public_key_hex(),
-                amount: 10,
+                recipient: alice.public_key_hex(),
+                amount: 50,
             }],
         );
-        tx.sign(&alice.signing_key);
 
-        blockchain.add_block(vec![tx]);
+        let mut tx1 = Transaction::new_utxo_spend(
+            coinbase.id.clone(),
+            0,
+            alice.public_key_hex(),
+            bob.public_key_hex(),
+            10,
+            alice.public_key_hex(),
+            40,
+        );
+        tx1.sign(&alice.signing_key);
+
+        blockchain.add_block(vec![coinbase]);
+        blockchain.add_block(vec![tx1]);
 
         let block = blockchain.chain.last().unwrap();
 
@@ -63,59 +60,52 @@ fn main() {
     #[cfg(debug_assertions)]
     {
         println!("Alice pubkey: {:?}", alice.verifying_key);
-
         println!("Bob pubkey: {:?}", bob.verifying_key);
+        println!("Carol pubkey: {:?}", carol.verifying_key);
     }
     println!("Alice Hex pubkey: {}", alice.public_key_hex());
     println!("Bob Hex pubkey  : {}", bob.public_key_hex());
+    println!("Carol Hex pubkey  : {}", carol.public_key_hex());
 
-    let difficulty = 4; //Added by Step 2
+    let difficulty = 4;
     let mut blockchain = Blockchain::new(difficulty);
 
-    let mut tx1 = Transaction::new(
-        vec![TxInput {
-            previous_tx_id: "genesis".to_string(),
-            output_index: 0,
-            sender_public_key: alice.public_key_hex(),
-            signature: None,
-        }],
+    let coinbase = Transaction::new(
+        vec![],
         vec![TxOutput {
-            recipient: bob.public_key_hex(),
-            amount: 10,
+            recipient: alice.public_key_hex(),
+            amount: 50,
         }],
     );
-    //    from: "Alice".to_string(),
-    //    to: "Bob".to_string(),
-    //    amount: 10,
-    //    sender_public_key: alice.public_key_hex(),
-    //    signature: None,
+
+    let mut tx1 = Transaction::new_utxo_spend(
+        coinbase.id.clone(),
+        0,
+        alice.public_key_hex(),
+        bob.public_key_hex(),
+        10,
+        alice.public_key_hex(),
+        40,
+    );
 
     tx1.sign(&alice.signing_key);
 
-    println!("Valid Signature: {}", tx1.verify());
-
-    let mut tx2 = Transaction::new(
-        vec![TxInput {
-            previous_tx_id: tx1.id.clone(),
-            output_index: 0,
-            sender_public_key: bob.public_key_hex(),
-            signature: None,
-        }],
-        vec![TxOutput {
-            recipient: carol.public_key_hex(),
-            amount: 5,
-        }],
+    let mut tx2 = Transaction::new_utxo_spend(
+        tx1.id.clone(),
+        0,
+        bob.public_key_hex(),
+        carol.public_key_hex(),
+        5,
+        bob.public_key_hex(),
+        5,
     );
-    //    from: "Bob".to_string(),
-    //    to: "Carol".to_string(),
-    //    amount: 5,
-    //    sender_public_key: bob.public_key_hex(),
-    //    signature: None,
 
     tx2.sign(&bob.signing_key);
 
-    println!("Valid Signature: {}", tx2.verify());
+    println!("Valid Signature tx1: {}", tx1.verify());
+    println!("Valid Signature tx2: {}", tx2.verify());
 
+    blockchain.add_block(vec![coinbase]);
     blockchain.add_block(vec![tx1]);
     blockchain.add_block(vec![tx2]);
 

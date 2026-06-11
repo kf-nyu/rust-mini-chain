@@ -21,12 +21,14 @@ impl UTXOSet {
     pub fn add_transaction(&mut self, transaction: &Transaction) {
         for (index, output) in transaction.outputs.iter().enumerate() {
             let key = Self::key(&transaction.id, index);
+            #[cfg(debug_assertions)]
             println!("ADD UTXO; {key}");
             self.outputs.insert(key, output.clone());
         }
 
         for input in &transaction.inputs {
             let key = Self::key(&input.previous_tx_id, input.output_index);
+            #[cfg(debug_assertions)]
             println!("REMOVE UTXO; {key}");
             self.outputs.remove(&key);
         }
@@ -63,14 +65,17 @@ impl UTXOSet {
         let mut input_total = 0;
 
         for input in &transaction.inputs {
-            let key = Self::key(&input.previous_tx_id, input.output_index);
-            println!("CHECK UTXO: {key}");
-
+            #[cfg(debug_assertions)]
+            {
+                let key = Self::key(&input.previous_tx_id, input.output_index);
+                println!("CHECK UTXO: {key}");
+            }
             let Some(output) = self.find_output(&input.previous_tx_id, input.output_index) else {
                 return false;
             };
 
             if output.recipient != input.sender_public_key {
+                #[cfg(debug_assertions)]
                 println!("WRONG OWNER");
                 return false;
             }
