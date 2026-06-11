@@ -24,6 +24,17 @@ This project was developed to explore the fundamental building blocks of blockch
 
 ## Recent Updates
 
+### v2.0
+
+- Refactored transactions from account-style transfers to an input-output model
+- Added TxInput and TxOutput types
+- Added UTXO set tracking
+- Added UTXO spend validation
+- Added ownership checks for spent outputs
+- Added change-output support
+- Added double-spend detection tests
+- Updated demo flow to use coinbase and UTXO-based transactions
+
 ### v1.1
 
 - Added validation of received blocks over TCP
@@ -156,6 +167,8 @@ Current integration tests verify:
 ---
 
 ## Prototype Scope
+
+The prototype now supports a simplified Bitcoin-style UTXO model, but it does not yet implement full peer-to-peer chain synchronization, persistent storage, mempools, mining rewards, or production-grade consensus.
 
 This repository is intentionally designed as a prototype blockchain implementation.
 
