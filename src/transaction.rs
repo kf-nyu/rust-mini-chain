@@ -4,6 +4,7 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+/// UTXO-style transaction that spends previous outputs into new outputs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     //pub from: String,
@@ -61,11 +62,14 @@ impl Transaction {
         //    "{}{}{}{}",
         //    self.from, self.to, self.amount, self.sender_public_key
         //)
-
+        // Signatures cover the transaction contents rather than a stored id,
+        // so verification stays tied to the current inputs and outputs.
         self.calculate_hash()
     }
 
     pub fn sign(&mut self, signing_key: &SigningKey) {
+        // Sign the transaction message using Ed25519.
+        // The signature is attached to each transaction input.
         let signature = signing_key.sign(self.message().as_bytes());
         let signature_hex = hex::encode(signature.to_bytes());
 
@@ -77,12 +81,15 @@ impl Transaction {
     }
 
     pub fn verify(&self) -> bool {
-        // Coinbase-sytle transactions have no inputs.
-        // For now, we will accept them. In Step 3 will define coinbase more explicitly
+        // Coinbase-style transactions have no inputs.
+        // This prototype accepts them as value-creating transactions
+        // until coinbase rules are modeled more explicitly.
         if self.inputs.is_empty() {
             return true;
         }
 
+        // Verify that each input signature matches
+        // the current transaction contents.
         for input in &self.inputs {
             let Some(signature_hex) = &input.signature else {
                 return false;
@@ -130,6 +137,7 @@ impl Transaction {
         change_recipient: String,
         change_amount: u64,
     ) -> Self {
+        // Helper for creating a spend transaction with a change output.
         let mut outputs = vec![TxOutput { recipient, amount }];
 
         if change_amount > 0 {

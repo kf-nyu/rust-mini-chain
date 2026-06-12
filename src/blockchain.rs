@@ -2,6 +2,7 @@ use crate::block::Block;
 use crate::transaction::Transaction;
 use crate::utxo::UTXOSet;
 
+/// Simplified blockchain containing proof-of-work blocks.
 #[derive(Debug)]
 pub struct Blockchain {
     pub chain: Vec<Block>,
@@ -41,14 +42,15 @@ impl Blockchain {
 
         self.chain.push(new_block);
     }
-    // Hash validation from 2nd block to the latest block for no break.
-    // Assume all block has the same difficulty.
     pub fn is_valid(&self) -> bool {
+        // Rebuild UTXO state from genesis forward while validating
+        // every block and transaction in chain order.
         if self.chain.is_empty() {
             return false;
         }
 
         let target = "0".repeat(self.difficulty);
+        // Tracks currently spendable outputs as validation progresses.
         let mut utxo_set = UTXOSet::new();
 
         for i in 0..self.chain.len() {
@@ -70,6 +72,8 @@ impl Blockchain {
                 }
             }
 
+            // Validate transactions against the spendable output state built
+            // from all earlier blocks before applying their effects.
             for transaction in &current.transactions {
                 if !utxo_set.validate_transaction(transaction) {
                     return false;

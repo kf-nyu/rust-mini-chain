@@ -2,6 +2,7 @@ use crate::transaction::Transaction;
 use crate::tx_output::TxOutput;
 use std::collections::HashMap;
 
+/// Collection of currently unspent transaction outputs.
 #[derive(Debug, Clone)]
 pub struct UTXOSet {
     pub outputs: HashMap<String, TxOutput>,
@@ -15,10 +16,13 @@ impl UTXOSet {
     }
 
     fn key(tx_id: &str, output_index: usize) -> String {
+        // Generates a unique identifier for an output.
+        // Example: abc123:0
         format!("{}:{}", tx_id, output_index)
     }
 
     pub fn add_transaction(&mut self, transaction: &Transaction) {
+        // Add newly created outputs to the UTXO set.
         for (index, output) in transaction.outputs.iter().enumerate() {
             let key = Self::key(&transaction.id, index);
             #[cfg(debug_assertions)]
@@ -26,6 +30,7 @@ impl UTXOSet {
             self.outputs.insert(key, output.clone());
         }
 
+        // Remove outputs consumed by transaction inputs.
         for input in &transaction.inputs {
             let key = Self::key(&input.previous_tx_id, input.output_index);
             #[cfg(debug_assertions)]
@@ -64,6 +69,8 @@ impl UTXOSet {
 
         let mut input_total = 0;
 
+        // Verify that all referenced outputs exist,
+        // belong to the signer, and cover the output value.
         for input in &transaction.inputs {
             #[cfg(debug_assertions)]
             {

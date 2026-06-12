@@ -8,6 +8,7 @@ use std::time::Instant;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
+    // CLI mode: run as a TCP node that listens for incoming blocks.
     if args.len() >= 3 && args[1] == "node" {
         let port = args[2].parse::<u16>().unwrap();
 
@@ -16,6 +17,8 @@ fn main() {
         return;
     }
 
+    // CLI mode: build a small sample chain and send the latest block
+    // to another node for manual networking tests.
     if args.len() >= 3 && args[1] == "send" {
         let mut blockchain = Blockchain::new(4);
 
@@ -51,6 +54,8 @@ fn main() {
         return;
     }
 
+    // Default demo flow: create wallets, build a few transactions,
+    // mine blocks locally, and validate the resulting chain.
     let start = Instant::now();
 
     let alice = Wallet::new();

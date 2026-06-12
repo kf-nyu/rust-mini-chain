@@ -1,6 +1,7 @@
 use sha2::{Digest, Sha256};
 
 pub fn hash(data: &str) -> String {
+    // Helper for producing a SHA-256 hash as a hex string.
     let mut hasher = Sha256::new();
     hasher.update(data.as_bytes());
 
@@ -9,6 +10,8 @@ pub fn hash(data: &str) -> String {
 
 pub fn merkle_root(transactions: &[String]) -> String {
     if transactions.is_empty() {
+        // Define the empty-tree Merkle root deterministically for blocks
+        // that contain no transactions, such as the genesis block here.
         return hash("");
     }
 
@@ -16,10 +19,13 @@ pub fn merkle_root(transactions: &[String]) -> String {
 
     while hashes.len() > 1 {
         if hashes.len() % 2 == 1 {
+            // Duplicate the final hash when a level has an odd number of leaves
+            // so every parent node is formed from a pair.
             let last = hashes.last().unwrap().clone();
             hashes.push(last);
         }
 
+        // Collapse one Merkle tree level by hashing adjacent pairs together.
         hashes = hashes
             .chunks(2)
             .map(|pair| {

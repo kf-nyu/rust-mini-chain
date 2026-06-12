@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::Instant;
+/// Proof-of-work block linking transactions to the previous block.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Block {
     pub index: u64,
@@ -41,7 +42,8 @@ impl Block {
             nonce: 0,
         };
 
-        //block.hash = block.calculate_hash();
+        // New blocks are always mined immediately so stored hashes
+        // reflect a valid proof of work for the current difficulty.
         block.mine(difficulty);
         block
     }
@@ -64,6 +66,8 @@ impl Block {
     pub fn mine(&mut self, difficulty: usize) {
         let start = Instant::now();
 
+        // The nonce is the only field changed during mining; all other
+        // block contents stay fixed while searching for a valid hash.
         let target = "0".repeat(difficulty);
 
         loop {
@@ -86,6 +90,8 @@ impl Block {
     }
 
     pub fn is_valid(&self, difficulty: usize) -> bool {
+        // Recompute both the block hash and proof-of-work prefix so
+        // tampering with block contents is detected deterministically.
         let target = "0".repeat(difficulty);
 
         if self.hash != self.calculate_hash() {
@@ -96,6 +102,8 @@ impl Block {
             return false;
         }
 
+        // Block-level validation only checks transaction signatures here.
+        // UTXO ownership and balance rules are enforced at chain level.
         for transaction in &self.transactions {
             if !transaction.verify() {
                 return false;

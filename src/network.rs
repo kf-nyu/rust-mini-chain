@@ -3,6 +3,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
 pub fn start_node(port: u16) {
+    // Listen for incoming TCP connections and validate received blocks.
     let listener = TcpListener::bind(format!("127.0.0.1:{port}")).unwrap();
 
     println!("Node listening on {port}");
@@ -33,6 +34,7 @@ pub fn start_node(port: u16) {
 }
 
 pub fn send_block(address: &str, block: &Block) {
+    // Serialize and transmit a block to a peer node.
     let mut stream = TcpStream::connect(address).unwrap();
 
     let json = serde_json::to_string(block).unwrap();
