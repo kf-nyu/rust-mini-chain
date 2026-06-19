@@ -62,6 +62,8 @@ fn main() {
         let loaded = storage.load_blockchain("chain.json").unwrap();
 
         println!("Loaded chain with {} blocks", loaded.chain.len());
+
+        println!("Loaded chain valid: {}", loaded.is_valid());
         // End of Temporary persistence smoke test
 
         let block = blockchain.chain.last().unwrap();

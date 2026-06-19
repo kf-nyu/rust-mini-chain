@@ -17,3 +17,6 @@ target/
 
 # JetBrains
 .idea/
+
+# Test JSON File
+chain.json
