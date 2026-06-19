@@ -36,12 +36,12 @@ pub fn start_node(port: u16) {
             }
 
             NetworkMessage::ChainRequest => {
-                println!("Received chain requst");
+                println!("Received chain request");
             }
 
             NetworkMessage::ChainResponse(blockchain) => {
                 println!(
-                    "Received chain response wiht {} blocks",
+                    "Received chain response with {} blocks",
                     blockchain.chain.len()
                 );
             }
@@ -67,4 +67,14 @@ pub fn send_message(address: &str, message: &NetworkMessage) {
     stream.write_all(json.as_bytes()).unwrap();
 
     println!("Sent network message to {address}");
+}
+
+pub fn send_chain_request(address: &str) {
+    //Sends a blockchain synchronization request to a peer node.
+    //The receiving node may respond with its current blockchain state.
+    let message = NetworkMessage::ChainRequest;
+
+    send_message(address, &message);
+
+    println!("Sent chain request to {address}");
 }

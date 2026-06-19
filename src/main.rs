@@ -17,6 +17,13 @@ fn main() {
         return;
     }
 
+    // CLI mode: send a chain request to another node.
+    if args.len() >= 3 && args[1] == "request" {
+        network::send_chain_request(&args[2]);
+
+        return;
+    }
+
     // CLI mode: build a small sample chain and send the latest block
     // to another node for manual networking tests.
     if args.len() >= 3 && args[1] == "send" {
