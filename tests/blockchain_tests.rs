@@ -549,3 +549,10 @@ fn utxo_balance_updates_after_spend() {
 
     assert_eq!(utxo_set.balance_of(&alice.public_key_hex()), 40);
 }
+
+#[test]
+fn received_chain_validation_passes() {
+    let blockchain = Blockchain::new(2);
+
+    assert!(blockchain.is_valid());
+}

@@ -86,4 +86,8 @@ impl Blockchain {
 
         true
     }
+
+    pub fn is_acceptable(&self) -> bool {
+        self.is_valid()
+    }
 }

@@ -116,7 +116,12 @@ pub fn send_chain_request(address: &str) {
                 "Received chain response with {} blocks",
                 blockchain.chain.len()
             );
-            println!("Received chain valid: {}", blockchain.is_valid());
+
+            if blockchain.is_valid() {
+                println!("Chain Validation: accepted");
+            } else {
+                println!("Chain Validation: rejected");
+            }
         }
         other => {
             println!("Unexpected response: {other:?}");
