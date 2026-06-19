@@ -7,8 +7,8 @@ use crate::wallet::Wallet;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 
+/// Listen for incoming TCP connections and validate received blocks.
 pub fn start_node(port: u16) {
-    // Listen for incoming TCP connections and validate received blocks.
     let listener = TcpListener::bind(format!("127.0.0.1:{port}")).unwrap();
 
     println!("Node listening on {port}");
@@ -74,8 +74,8 @@ pub fn start_node(port: u16) {
     }
 }
 
+/// Serialize and transmit a block to a peer node.
 pub fn send_block(address: &str, block: &Block) {
-    // Serialize and transmit a block to a peer node.
     let message = NetworkMessage::Block(block.clone());
 
     send_message(address, &message);
@@ -83,8 +83,8 @@ pub fn send_block(address: &str, block: &Block) {
     println!("Sent block {} to {}", block.index, address);
 }
 
+/// Serialize and transmit a message to a peer node.
 pub fn send_message(address: &str, message: &NetworkMessage) {
-    // Serialize and transmit a message to a peer node.
     let json = serde_json::to_string(message).unwrap();
 
     let mut stream = TcpStream::connect(address).unwrap();
@@ -94,9 +94,9 @@ pub fn send_message(address: &str, message: &NetworkMessage) {
     println!("Sent network message to {address}");
 }
 
+/// Sends a blockchain synchronization request to a peer node.
+/// If the peer returns a valid longer chain, the lcaol demo chain is replaced.
 pub fn send_chain_request(address: &str) {
-    //Sends a blockchain synchronization request to a peer node.
-    //The receiving node may respond with its current blockchain state.
     let message = NetworkMessage::ChainRequest;
     let json = serde_json::to_string(&message).unwrap();
 
@@ -119,13 +119,16 @@ pub fn send_chain_request(address: &str) {
 
             let mut local_chain = Blockchain::new(blockchain.difficulty);
 
+            println!(
+                "Local chain before sync: {} blocks",
+                local_chain.chain.len()
+            );
+
             if local_chain.replace_chain_if_longer(blockchain) {
-                println!(
-                    "Local chain replaced. New length: {} blocks",
-                    local_chain.chain.len()
-                );
+                println!("Local chain after sync: {} blocks", local_chain.chain.len());
+                println!("Chain synchronization: accepted");
             } else {
-                println!("Received chain rejected or not longer");
+                println!("Chain synchronization: rejected");
             }
         }
         other => {
