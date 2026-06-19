@@ -4,7 +4,7 @@
 
 ## Overview
 
-Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based block propagation, and chain validation.
+Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, and blockchain validation.
 
 The system is designed as an incremental prototype platform: each release introduces a focused capability while preserving clarity around architecture, validation rules, and engineering trade-offs. This approach supports both technical depth and extensibility as the project evolves.
 
@@ -44,9 +44,15 @@ cargo run -- node 6000
 cargo run -- send 127.0.0.1:6000
 ```
 
+### Send a chain synchronization request
+
+```bash
+cargo run -- request 127.0.0.1:6000
+```
+
 ## Current Features
 
-Current release: `v2.1.0`
+Current release: `v3.0.0`
 
 ### Blockchain Core
 
@@ -70,10 +76,15 @@ Current release: `v2.1.0`
 - [x] Change-output generation
 - [x] Double-spend detection
 
-### Networking
+### Networking & Synchronization
 
 - [x] TCP networking and block propagation
 - [x] Validation of received blocks before acceptance
+- [x] Network message protocol
+- [x] ChainRequest / ChainResponse messaging
+- [x] Peer chain validation
+- [x] Longest-chain replacement rule
+- [x] Chain synchronization CLI demo
 
 ### Engineering
 
@@ -81,12 +92,28 @@ Current release: `v2.1.0`
 - [x] Unit and integration tests
 - [x] Rustdoc documentation
 
-### In Progress
+### Planned
 
-- [ ] Chain synchronization (`v3.0`)
 - [ ] Persistent storage (`v4.0`)
 - [ ] Transaction mempool (`v5.0`)
 - [ ] Tokio async networking (`v6.0`)
+
+### Future Track A: Enterprise DLT
+
+- [ ] Permissioned network
+- [ ] Asset tokenization
+- [ ] Settlement engine
+- [ ] Custody controls
+- [ ] Compliance layer
+- [ ] Audit & reporting
+
+### Future Track B: Public Blockchain
+
+- [ ] Difficulty adjustment
+- [ ] Mining rewards and fees
+- [ ] Fork handling
+- [ ] Smart contracts
+- [ ] Light clients (SPV)
 
 ## Architecture
 
@@ -133,18 +160,29 @@ Transactions are hashed and combined recursively until a single Merkle root rema
 
 ## Validation Model
 
-Chain validation currently checks:
+Blockchain validation currently checks:
 
 - Block hashes are reproducible from block contents
 - Each block satisfies the configured proof-of-work target
-- `previous_hash` links match the preceding block
+- `previous_hash` references match the preceding block
 - Transaction signatures verify against current transaction contents
 - Referenced UTXOs exist before they are spent
 - Inputs belong to the signing public key
 - Input totals cover output totals
 - Double-spend attempts are rejected by rebuilding UTXO state in chain order
 
-This validation runs when the blockchain is inspected locally and when received blocks are checked by the networking layer.
+Chain synchronization validation additionally checks:
+
+- Received peer chains pass full blockchain validation
+- Invalid chains are rejected before synchronization
+- Only valid longer chains may replace the local chain
+- Shorter chains are rejected by the longest-chain rule
+
+Validation is performed during:
+
+- Local blockchain verification
+- Received block verification over the network
+- Peer chain synchronization requests and responses
 
 ## Roadmap
 
@@ -160,7 +198,7 @@ v2.0 ✓ UTXO Model
 v2.1 ✓ Documentation
         │
         ▼
-v3.0 Chain Synchronization
+v3.0 ✓ Chain Synchronization
         │
 v4.0 Persistence
         │
@@ -200,15 +238,14 @@ v12A Audit &
 2026
         Completed
         ─────────────────
-        ✓ v1.0 Blockchain Fundamentals
+June    ✓ v1.0 Blockchain Fundamentals
         ✓ v1.1 TCP Networking
         ✓ v2.0 Bitcoin-style UTXO Model
-June 12 ✓ v2.1 Documentation & Rustdoc
+        ✓ v2.1 Documentation & Rustdoc
+        ✓ v3.0 Chain Synchronization
 
         Core Platform
         ─────────────
-June    v3.0 Chain Synchronization
-            ↓
         v4.0 Persistence
             ↓
         v5.0 Transaction Mempool
@@ -248,10 +285,9 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No peer chain synchronization yet (`v3.0`)
 - No persistent blockchain storage yet (`v4.0`)
 - No transaction mempool yet (`v5.0`)
-- No async Tokio networking yet (`v6.0`)
+- No asynchronous networking via Tokio yet (`v6.0`)
 - No permissioned network controls yet
 - No asset tokenization or settlement workflows yet
 - No custody or compliance layers yet
@@ -260,7 +296,8 @@ This implementation is still evolving. The current codebase intentionally omits 
 ### Prototype Simplifications
 
 - Coinbase-style transactions are currently represented as transactions with no inputs
-- Networking validates received blocks but does not yet merge or reconcile competing chains
+- Chain synchronization currently uses a simplified longest-chain replacement model
+- Peer discovery and automatic synchronization are not yet implemented
 - Proof-of-work difficulty is treated as a simple configurable prefix target
 - The wallet is in-memory only and does not persist keys
 
@@ -295,12 +332,19 @@ Current tests cover:
 - Change-output spending
 - UTXO balance tracking
 
+### Chain Synchronization
+
+- Valid longer chain acceptance
+- Shorter chain rejection
+- Invalid chain rejection
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
 - `src/blockchain.rs` - blockchain container and chain-wide validation
 - `src/merkle.rs` - Merkle hashing helpers
-- `src/network.rs` - TCP block send/receive helpers
+- `src/network_message.rs` - protocol messages exchanged between peers
+- `src/network.rs` - TCP networking, chain requests, responses, and synchronization
 - `src/transaction.rs` - UTXO transaction creation, signing, and verification
 - `src/tx_input.rs` - transaction inputs that reference prior outputs
 - `src/tx_output.rs` - spendable transaction outputs
@@ -339,9 +383,21 @@ Current tests cover:
 
 ## Implementation Status
 
-Digital Asset Ledger is an incremental research and engineering prototype implemented in Rust to demonstrate core blockchain and distributed-systems design.
+Digital Asset Ledger is an incremental research and engineering prototype implemented in Rust to explore blockchain, distributed systems, cybersecurity, and digital asset infrastructure concepts.
 
-The current implementation is appropriate for architectural review and technical discussion, but it is not production-ready. Roadmap items such as chain synchronization, persistence, mempool management, and asynchronous networking are planned for subsequent releases.
+The current implementation includes:
+
+- Proof-of-Work blockchain validation
+- Ed25519 wallet and transaction authentication
+- Bitcoin-style UTXO transaction processing
+- Merkle tree verification
+- TCP peer-to-peer networking
+- Peer chain synchronization
+- Longest-chain replacement
+
+The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
+
+Future releases will focus on persistent storage, transaction mempool management, asynchronous networking with Tokio, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
 
 ## References
 
@@ -383,7 +439,7 @@ The implementation draws inspiration from:
 - Bitcoin's UTXO model, proof-of-work consensus mechanism, and decentralized ledger architecture
 - The Rust open-source ecosystem and community
 - Research and industry developments in Distributed Ledger Technology (DLT), digital assets, custody, settlement, and tokenization
-- Graduate coursework at NYU Tandon School of Engineering, including blockchain, cryptography, privacy, machine learning, and big data studies
+- Graduate coursework at NYU Tandon School of Engineering, including blockchain, operating systems, cryptography, privacy, machine/deep learning, big data and application security
 
 Any errors, omissions, simplifications, or design decisions remain solely the responsibility of the author.
 
