@@ -1,13 +1,31 @@
 use crate::block::Block;
+use crate::blockchain::Blockchain;
 use crate::network_message::NetworkMessage;
+use crate::transaction::Transaction;
+use crate::tx_output::TxOutput;
+use crate::wallet::Wallet;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{Shutdown, TcpListener, TcpStream};
 
 pub fn start_node(port: u16) {
     // Listen for incoming TCP connections and validate received blocks.
     let listener = TcpListener::bind(format!("127.0.0.1:{port}")).unwrap();
 
     println!("Node listening on {port}");
+
+    let mut blockchain = Blockchain::new(4);
+
+    let alice = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    blockchain.add_block(vec![coinbase]);
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
@@ -37,6 +55,13 @@ pub fn start_node(port: u16) {
 
             NetworkMessage::ChainRequest => {
                 println!("Received chain request");
+
+                let response = NetworkMessage::ChainResponse(blockchain.clone());
+                let json = serde_json::to_string(&response).unwrap();
+
+                stream.write_all(json.as_bytes()).unwrap();
+
+                println!("Sent chain response with {} blocks", blockchain.chain.len());
             }
 
             NetworkMessage::ChainResponse(blockchain) => {
@@ -73,8 +98,28 @@ pub fn send_chain_request(address: &str) {
     //Sends a blockchain synchronization request to a peer node.
     //The receiving node may respond with its current blockchain state.
     let message = NetworkMessage::ChainRequest;
+    let json = serde_json::to_string(&message).unwrap();
 
-    send_message(address, &message);
+    let mut stream = TcpStream::connect(address).unwrap();
 
-    println!("Sent chain request to {address}");
+    stream.write_all(json.as_bytes()).unwrap();
+    stream.shutdown(Shutdown::Write).unwrap();
+
+    let mut buffer = String::new();
+    stream.read_to_string(&mut buffer).unwrap();
+
+    let response: NetworkMessage = serde_json::from_str(&buffer).unwrap();
+
+    match response {
+        NetworkMessage::ChainResponse(blockchain) => {
+            println!(
+                "Received chain response with {} blocks",
+                blockchain.chain.len()
+            );
+            println!("Received chain valid: {}", blockchain.is_valid());
+        }
+        other => {
+            println!("Unexpected response: {other:?}");
+        }
+    }
 }
