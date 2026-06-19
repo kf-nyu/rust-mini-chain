@@ -1,9 +1,10 @@
 use crate::block::Block;
 use crate::transaction::Transaction;
 use crate::utxo::UTXOSet;
+use serde::{Deserialize, Serialize};
 
 /// Simplified blockchain containing proof-of-work blocks.
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Blockchain {
     pub chain: Vec<Block>,
     pub difficulty: usize,

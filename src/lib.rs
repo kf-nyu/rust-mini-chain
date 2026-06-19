@@ -16,3 +16,5 @@ pub mod tx_output;
 pub mod utxo;
 /// Wallet keypair generation and public key formatting.
 pub mod wallet;
+/// Defines the network protocol used for communication and synchronization between blockchain nodes.
+pub mod network_message;
