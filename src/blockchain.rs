@@ -91,6 +91,8 @@ impl Blockchain {
         self.is_valid()
     }
 
+    /// Synchronizes the local chain with a peer chain.
+    /// A valid longer chain replaces the current chain.
     pub fn replace_chain_if_longer(&mut self, candidate: Blockchain) -> bool {
         if !candidate.is_valid() {
             return false;

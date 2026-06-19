@@ -617,3 +617,74 @@ fn rejects_invalid_longer_chain() {
     assert!(!replaced);
     assert_eq!(local_chain.chain.len(), 1);
 }
+
+#[test]
+fn chain_sync_accepts_valid_longer_chain() {
+    let mut local_chain = Blockchain::new(2);
+
+    let alice = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut peer_chain = Blockchain::new(2);
+
+    peer_chain.add_block(vec![coinbase]);
+
+    assert!(local_chain.replace_chain_if_longer(peer_chain));
+
+    assert_eq!(local_chain.chain.len(), 2);
+}
+
+#[test]
+fn chain_sync_rejects_shorter_chain() {
+    let alice = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut local_chain = Blockchain::new(2);
+
+    local_chain.add_block(vec![coinbase]);
+
+    let peer_chain = Blockchain::new(2);
+
+    assert!(!local_chain.replace_chain_if_longer(peer_chain));
+
+    assert_eq!(local_chain.chain.len(), 2);
+}
+
+#[test]
+fn chain_sync_rejects_invalid_chain() {
+    let alice = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut peer_chain = Blockchain::new(2);
+
+    peer_chain.add_block(vec![coinbase]);
+
+    peer_chain.chain[1].hash = "invalid".to_string();
+
+    let mut local_chain = Blockchain::new(2);
+
+    assert!(!local_chain.replace_chain_if_longer(peer_chain));
+
+    assert_eq!(local_chain.chain.len(), 1);
+}
