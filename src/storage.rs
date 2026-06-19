@@ -1,4 +1,5 @@
 use crate::blockchain::Blockchain;
+use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -28,5 +29,17 @@ impl Storage {
         file.write_all(json.as_bytes())?;
 
         Ok(())
+    }
+
+    /// Loads a blockchain from a JSON file.
+    pub fn load_blockchain<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> Result<Blockchain, Box<dyn std::error::Error>> {
+        let json = fs::read_to_string(path)?;
+
+        let blockchain = serde_json::from_str(&json)?;
+
+        Ok(blockchain)
     }
 }

@@ -1,5 +1,6 @@
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::network;
+use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::wallet::Wallet;
@@ -53,6 +54,15 @@ fn main() {
 
         blockchain.add_block(vec![coinbase]);
         blockchain.add_block(vec![tx1]);
+
+        // Temporary persistence smoke test
+        let storage = Storage::new();
+
+        storage.save_blockchain(&blockchain, "chain.json").unwrap();
+        let loaded = storage.load_blockchain("chain.json").unwrap();
+
+        println!("Loaded chain with {} blocks", loaded.chain.len());
+        // End of Temporary persistence smoke test
 
         let block = blockchain.chain.last().unwrap();
 
