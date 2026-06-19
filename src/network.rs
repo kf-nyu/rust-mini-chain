@@ -117,10 +117,15 @@ pub fn send_chain_request(address: &str) {
                 blockchain.chain.len()
             );
 
-            if blockchain.is_valid() {
-                println!("Chain Validation: accepted");
+            let mut local_chain = Blockchain::new(blockchain.difficulty);
+
+            if local_chain.replace_chain_if_longer(blockchain) {
+                println!(
+                    "Local chain replaced. New length: {} blocks",
+                    local_chain.chain.len()
+                );
             } else {
-                println!("Chain Validation: rejected");
+                println!("Received chain rejected or not longer");
             }
         }
         other => {

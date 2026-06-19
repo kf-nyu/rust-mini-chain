@@ -556,3 +556,64 @@ fn received_chain_validation_passes() {
 
     assert!(blockchain.is_valid());
 }
+
+#[test]
+fn replaces_with_valid_longer_chain() {
+    let mut local_chain = Blockchain::new(2);
+
+    let alice = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut candidate_chain = Blockchain::new(2);
+    candidate_chain.add_block(vec![coinbase]);
+
+    assert!(candidate_chain.chain.len() > local_chain.chain.len());
+
+    let replaced = local_chain.replace_chain_if_longer(candidate_chain);
+
+    assert!(replaced);
+    assert_eq!(local_chain.chain.len(), 2);
+}
+
+#[test]
+fn rejects_chain_that_is_not_longer() {
+    let mut local_chain = Blockchain::new(2);
+    let candidate_chain = Blockchain::new(2);
+
+    let replaced = local_chain.replace_chain_if_longer(candidate_chain);
+
+    assert!(!replaced);
+    assert_eq!(local_chain.chain.len(), 1);
+}
+
+#[test]
+fn rejects_invalid_longer_chain() {
+    let mut local_chain = Blockchain::new(2);
+
+    let alice = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut candidate_chain = Blockchain::new(2);
+    candidate_chain.add_block(vec![coinbase]);
+
+    candidate_chain.chain[1].hash = "bad_hash".to_string();
+
+    let replaced = local_chain.replace_chain_if_longer(candidate_chain);
+
+    assert!(!replaced);
+    assert_eq!(local_chain.chain.len(), 1);
+}

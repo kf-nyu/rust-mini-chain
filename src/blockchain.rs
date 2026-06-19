@@ -90,4 +90,19 @@ impl Blockchain {
     pub fn is_acceptable(&self) -> bool {
         self.is_valid()
     }
+
+    pub fn replace_chain_if_longer(&mut self, candidate: Blockchain) -> bool {
+        if !candidate.is_valid() {
+            return false;
+        }
+
+        if candidate.chain.len() <= self.chain.len() {
+            return false;
+        }
+
+        self.chain = candidate.chain;
+        self.difficulty = candidate.difficulty;
+
+        true
+    }
 }
