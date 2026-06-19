@@ -1,4 +1,5 @@
 use crate::block::Block;
+use crate::network_message::NetworkMessage;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
@@ -15,31 +16,55 @@ pub fn start_node(port: u16) {
 
         stream.read_to_string(&mut buffer).unwrap();
 
-        let block: Block = serde_json::from_str(&buffer).unwrap();
+        let message: NetworkMessage = serde_json::from_str(&buffer).unwrap();
 
-        println!("Received block {}", block.index);
-        println!("Hash: {}", block.hash);
-        println!("Previous hash: {}", block.previous_hash);
-        println!("Merkle root: {}", block.merkle_root);
-        println!("Transactions: {}", block.transactions.len());
+        match message {
+            NetworkMessage::Block(block) => {
+                println!("Received block {}", block.index);
+                println!("Hash: {}", block.hash);
+                println!("Previous hash: {}", block.previous_hash);
+                println!("Merkle root: {}", block.merkle_root);
+                println!("Transactions: {}", block.transactions.len());
 
-        let difficulty = 4;
+                let difficulty = 4;
 
-        if block.is_valid(difficulty) {
-            println!("Block validation: accepted");
-        } else {
-            println!("Block validation: rejected");
+                if block.is_valid(difficulty) {
+                    println!("Block validation: accepted");
+                } else {
+                    println!("Block validation: rejected");
+                }
+            }
+
+            NetworkMessage::ChainRequest => {
+                println!("Received chain requst");
+            }
+
+            NetworkMessage::ChainResponse(blockchain) => {
+                println!(
+                    "Received chain response wiht {} blocks",
+                    blockchain.chain.len()
+                );
+            }
         }
     }
 }
 
 pub fn send_block(address: &str, block: &Block) {
     // Serialize and transmit a block to a peer node.
-    let mut stream = TcpStream::connect(address).unwrap();
+    let message = NetworkMessage::Block(block.clone());
 
-    let json = serde_json::to_string(block).unwrap();
+    send_message(address, &message);
+
+    println!("Sent block {} to {}", block.index, address);
+}
+
+pub fn send_message(address: &str, message: &NetworkMessage) {
+    // Serialize and transmit a message to a peer node.
+    let json = serde_json::to_string(message).unwrap();
+
+    let mut stream = TcpStream::connect(address).unwrap();
 
     stream.write_all(json.as_bytes()).unwrap();
 
-    println!("Sent block {} to {}", block.index, address);
+    println!("Sent network message to {address}");
 }
