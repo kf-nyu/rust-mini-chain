@@ -50,9 +50,15 @@ cargo run -- send 127.0.0.1:6000
 cargo run -- request 127.0.0.1:6000
 ```
 
+### Run the mempool lifecycle demo
+
+```bash
+cargo run -- mempool-demo
+```
+
 ## Current Features
 
-Current release: `v4.0.0`
+Current release: `v5.0.0`
 
 ### Blockchain Core
 
@@ -93,6 +99,16 @@ Current release: `v4.0.0`
 - [x] Load blockchain state from disk
 - [x] Validate loaded blockchain state
 
+### Mempool
+
+- [x] In-memory pending transaction pool
+- [x] Transaction insertion with signature validation
+- [x] Invalid transaction rejection
+- [x] Duplicate transaction rejection
+- [x] Transaction selection for block mining
+- [x] Removal of mined transactions
+- [x] Mempool lifecycle CLI demo
+
 ### Engineering
 
 - [x] Modular Rust project structure
@@ -101,7 +117,6 @@ Current release: `v4.0.0`
 
 ### Planned
 
-- [ ] Transaction mempool (`v5.0`)
 - [ ] Tokio async networking (`v6.0`)
 
 ### Future Track A: Enterprise DLT
@@ -207,9 +222,9 @@ v3.0 ✓ Chain Synchronization
         │
 v4.0 ✓ Persistence
         │
-        ▼
-v5.0 Transaction Mempool
+v5.0 ✓ Transaction Mempool
         │
+        ▼
 v6.0 Tokio Async Networking
         │
         ├─────────────────────┐
@@ -250,26 +265,25 @@ June    ✓ v1.0 Blockchain Fundamentals
         ✓ v2.1 Documentation & Rustdoc
         ✓ v3.0 Chain Synchronization
         ✓ v4.0 Persistence
+        ✓ v5.0 Transaction Mempool
 
         Core Platform
         ─────────────
-        v5.0 Transaction Mempool
-            ↓
         v6.0 Tokio Async Networking
             ↓
         Track A: Enterprise DLT (Primary)
         ─────────────────────────────────
-July    v7A Permissioned Network
+        v7A Permissioned Network
             ↓
         v8A Asset Tokenization
             ↓
         v9A Settlement Engine
             ↓
-        v10A Custody Controls
+July    v10A Custody Controls
             ↓
         v11A Compliance Layer
             ↓
-August  v12A Audit & Reporting
+        v12A Audit & Reporting
 
         Track B: Public Blockchain (Secondary)
         ──────────────────────────────────────
@@ -281,7 +295,7 @@ August  v12A Audit & Reporting
             ↓
         v10B Smart Contracts
             ↓
-Sep     v11B Light Clients (SPV)
+August  v11B Light Clients (SPV)
 ```
 
 ## Limitations
@@ -290,7 +304,6 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No transaction mempool yet (`v5.0`)
 - No asynchronous networking via Tokio yet (`v6.0`)
 - No permissioned network controls yet
 - No asset tokenization or settlement workflows yet
@@ -313,7 +326,8 @@ Run the full test suite with:
 ```bash
 cargo test
 ```
-Current test suite includes 24 integration tests covering:
+
+Current test suite includes 30 integration tests covering:
 
 ### Blockchain Validation
 
@@ -348,6 +362,15 @@ Current test suite includes 24 integration tests covering:
 - Saved blockchain loading
 - Loaded blockchain validation
 
+### Mempool
+
+- Valid transaction insertion
+- Invalid transaction rejection
+- Duplicate transaction rejection
+- Transaction selection for mining
+- Mined transaction removal
+- Full mempool lifecycle validation
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
@@ -361,7 +384,8 @@ Current test suite includes 24 integration tests covering:
 - `src/utxo.rs` - in-memory unspent output tracking and validation
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
-- `tests/blockchain_tests.rs` - integration coverage for blockchain and UTXO behavior
+- `src/mempool.rs` - in-memory pending transaction pool
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, and mempool behavior
 
 ## Technologies
 
@@ -406,10 +430,12 @@ The current implementation includes:
 - Peer chain synchronization
 - Longest-chain replacement
 - JSON-based blockchain persistence
+- In-memory transaction mempool
+- Mempool transaction selection and removal
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will focus on transaction mempool management, asynchronous networking with Tokio, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
+Future releases will focus on asynchronous networking with Tokio, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
 
 ## References
 
