@@ -23,4 +23,9 @@ impl Mempool {
     pub fn is_empty(&self) -> bool {
         self.transactions.is_empty()
     }
+
+    /// Adds a transaction to the mempool.
+    pub fn add_transaction(&mut self, transaction: Transaction) {
+        self.transactions.push(transaction);
+    }
 }

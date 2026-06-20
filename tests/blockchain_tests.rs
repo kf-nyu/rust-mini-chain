@@ -1,4 +1,5 @@
 use rust_mini_chain::blockchain::Blockchain;
+use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
@@ -733,4 +734,25 @@ fn loaded_blockchain_passes_validation() {
     assert!(loaded.is_valid());
 
     fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn mempool_accepts_transaction() {
+    let mut mempool = Mempool::new();
+
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let transaction = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 10,
+        }],
+    );
+
+    mempool.add_transaction(transaction);
+
+    assert_eq!(mempool.len(), 1);
+    assert!(!mempool.is_empty());
 }
