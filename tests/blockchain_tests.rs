@@ -780,3 +780,23 @@ fn mempool_rejects_invalid_transaction() {
     assert_eq!(mempool.len(), 0);
     assert!(mempool.is_empty());
 }
+
+#[test]
+fn mempool_rejects_duplicate_transaction() {
+    let mut mempool = Mempool::new();
+
+    let bob = Wallet::new();
+
+    let transaction = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 10,
+        }],
+    );
+
+    assert!(mempool.add_transaction(transaction.clone()));
+    assert!(!mempool.add_transaction(transaction));
+
+    assert_eq!(mempool.len(), 1);
+}
