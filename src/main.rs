@@ -36,6 +36,60 @@ async fn main() {
         return;
     }
 
+    // CLI mode: Demo for async: async-node, async-send, async-request-chain together
+    if args.len() >= 3 && args[1] == "async-demo" {
+        let address = args[2].clone();
+
+        let port: u16 = address.split(':').last().unwrap().parse().unwrap();
+
+        tokio::spawn(async move {
+            if let Err(error) = async_network::start_async_node(port).await {
+                eprintln!("Async node failed: {error}");
+            }
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        let mut blockchain = Blockchain::new(4);
+
+        let alice = Wallet::new();
+        let bob = Wallet::new();
+
+        let coinbase = Transaction::new(
+            vec![],
+            vec![TxOutput {
+                recipient: alice.public_key_hex(),
+                amount: 50,
+            }],
+        );
+
+        let mut tx1 = Transaction::new_utxo_spend(
+            coinbase.id.clone(),
+            0,
+            alice.public_key_hex(),
+            bob.public_key_hex(),
+            10,
+            alice.public_key_hex(),
+            40,
+        );
+        tx1.sign(&alice.signing_key);
+
+        blockchain.add_block(vec![coinbase]);
+        blockchain.add_block(vec![tx1]);
+
+        let block = blockchain.chain.last().unwrap();
+
+        async_network::send_async_block(&args[2], block)
+            .await
+            .unwrap();
+
+        async_network::send_async_chain_request(&address)
+            .await
+            .unwrap();
+
+        return;
+    }
+
     // CLI mode: build a small sample chain and send the latest block by async
     // to another node for manual networking tests.
     if args.len() >= 3 && args[1] == "async-send" {
