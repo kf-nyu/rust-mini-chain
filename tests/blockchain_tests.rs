@@ -884,3 +884,45 @@ fn mempool_removes_mined_transactions() {
 
     assert_eq!(remaining[0].id, tx3.id);
 }
+
+#[test]
+fn mempool_lifecycle_mines_and_removes_transactions() {
+    let mut blockchain = Blockchain::new(2);
+    let mut mempool = Mempool::new();
+
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let coinbase = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: alice.public_key_hex(),
+            amount: 50,
+        }],
+    );
+
+    let mut tx1 = Transaction::new_utxo_spend(
+        coinbase.id.clone(),
+        0,
+        alice.public_key_hex(),
+        bob.public_key_hex(),
+        10,
+        alice.public_key_hex(),
+        40,
+    );
+
+    tx1.sign(&alice.signing_key);
+
+    blockchain.add_block(vec![coinbase]);
+
+    assert!(mempool.add_transaction(tx1));
+
+    let selected = mempool.select_transactions(1);
+
+    blockchain.add_block(selected.clone());
+
+    mempool.remove_transactions(&selected);
+
+    assert!(mempool.is_empty());
+    assert!(blockchain.is_valid());
+}
