@@ -1,3 +1,5 @@
+/// Tokio-based asynchronous networking helpers.
+pub mod async_network;
 /// Proof-of-work block type and block-level validation.
 pub mod block;
 /// Blockchain container and chain-wide validation rules.
