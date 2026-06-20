@@ -800,3 +800,42 @@ fn mempool_rejects_duplicate_transaction() {
 
     assert_eq!(mempool.len(), 1);
 }
+
+#[test]
+fn mempool_selects_transactions_for_block() {
+    let mut mempool = Mempool::new();
+
+    let wallet = Wallet::new();
+
+    let tx1 = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: wallet.public_key_hex(),
+            amount: 10,
+        }],
+    );
+
+    let tx2 = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: wallet.public_key_hex(),
+            amount: 20,
+        }],
+    );
+
+    let tx3 = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: wallet.public_key_hex(),
+            amount: 30,
+        }],
+    );
+
+    assert!(mempool.add_transaction(tx1));
+    assert!(mempool.add_transaction(tx2));
+    assert!(mempool.add_transaction(tx3));
+
+    let selected = mempool.select_transactions(2);
+
+    assert_eq!(selected.len(), 2);
+}

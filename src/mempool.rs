@@ -44,4 +44,18 @@ impl Mempool {
 
         true
     }
+
+    /// Returns all pending transactions.
+    pub fn transactions(&self) -> &[Transaction] {
+        &self.transactions
+    }
+
+    /// Returns up to max_transactions pending transactions.
+    pub fn select_transactions(&self, max_transactions: usize) -> Vec<Transaction> {
+        self.transactions
+            .iter()
+            .take(max_transactions)
+            .cloned()
+            .collect()
+    }
 }
