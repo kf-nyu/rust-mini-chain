@@ -839,3 +839,48 @@ fn mempool_selects_transactions_for_block() {
 
     assert_eq!(selected.len(), 2);
 }
+
+#[test]
+fn mempool_removes_mined_transactions() {
+    let mut mempool = Mempool::new();
+
+    let wallet = Wallet::new();
+
+    let tx1 = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: wallet.public_key_hex(),
+            amount: 10,
+        }],
+    );
+
+    let tx2 = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: wallet.public_key_hex(),
+            amount: 20,
+        }],
+    );
+
+    let tx3 = Transaction::new(
+        vec![],
+        vec![TxOutput {
+            recipient: wallet.public_key_hex(),
+            amount: 30,
+        }],
+    );
+
+    assert!(mempool.add_transaction(tx1.clone()));
+    assert!(mempool.add_transaction(tx2.clone()));
+    assert!(mempool.add_transaction(tx3.clone()));
+
+    let selected = vec![tx1, tx2];
+
+    mempool.remove_transactions(&selected);
+
+    assert_eq!(mempool.len(), 1);
+
+    let remaining = mempool.transactions();
+
+    assert_eq!(remaining[0].id, tx3.id);
+}

@@ -58,4 +58,15 @@ impl Mempool {
             .cloned()
             .collect()
     }
+
+    /// Removes transactions from the mempool by transaction id.
+    pub fn remove_transactions(&mut self, mined_transactions: &[Transaction]) {
+        let mined_ids: Vec<String> = mined_transactions
+            .iter()
+            .map(|transaction| transaction.id.clone())
+            .collect();
+
+        self.transactions
+            .retain(|transaction| !mined_ids.contains(&transaction.id));
+    }
 }
