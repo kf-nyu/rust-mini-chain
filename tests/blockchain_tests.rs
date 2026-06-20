@@ -1,9 +1,11 @@
 use rust_mini_chain::blockchain::Blockchain;
+use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
 use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::utxo::UTXOSet;
 use rust_mini_chain::wallet::Wallet;
+use std::fs;
 
 fn signed_transaction(
     previous_tx_id: &str,
@@ -687,4 +689,48 @@ fn chain_sync_rejects_invalid_chain() {
     assert!(!local_chain.replace_chain_if_longer(peer_chain));
 
     assert_eq!(local_chain.chain.len(), 1);
+}
+
+#[test]
+fn saved_blockchain_file_is_created() {
+    let blockchain = Blockchain::new(2);
+    let storage = Storage::new();
+    let path = "test_chain_created.json";
+
+    storage.save_blockchain(&blockchain, path).unwrap();
+
+    assert!(fs::metadata(path).is_ok());
+
+    fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn saved_blockchain_can_be_loaded() {
+    let blockchain = Blockchain::new(2);
+    let storage = Storage::new();
+    let path = "test_chain_loaded.json";
+
+    storage.save_blockchain(&blockchain, path).unwrap();
+
+    let loaded = storage.load_blockchain(path).unwrap();
+
+    assert_eq!(loaded.chain.len(), blockchain.chain.len());
+    assert_eq!(loaded.difficulty, blockchain.difficulty);
+
+    fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn loaded_blockchain_passes_validation() {
+    let blockchain = Blockchain::new(2);
+    let storage = Storage::new();
+    let path = "test_chain_loaded.json";
+
+    storage.save_blockchain(&blockchain, path).unwrap();
+
+    let loaded = storage.load_blockchain(path).unwrap();
+
+    assert!(loaded.is_valid());
+
+    fs::remove_file(path).unwrap();
 }
