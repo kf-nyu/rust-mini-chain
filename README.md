@@ -52,7 +52,7 @@ cargo run -- request 127.0.0.1:6000
 
 ## Current Features
 
-Current release: `v3.0.0`
+Current release: `v4.0.0`
 
 ### Blockchain Core
 
@@ -86,6 +86,13 @@ Current release: `v3.0.0`
 - [x] Longest-chain replacement rule
 - [x] Chain synchronization CLI demo
 
+### Persistence
+
+- [x] JSON-based blockchain persistence
+- [x] Save blockchain state to disk
+- [x] Load blockchain state from disk
+- [x] Validate loaded blockchain state
+
 ### Engineering
 
 - [x] Modular Rust project structure
@@ -94,7 +101,6 @@ Current release: `v3.0.0`
 
 ### Planned
 
-- [ ] Persistent storage (`v4.0`)
 - [ ] Transaction mempool (`v5.0`)
 - [ ] Tokio async networking (`v6.0`)
 
@@ -197,11 +203,11 @@ v2.0 ✓ UTXO Model
         │
 v2.1 ✓ Documentation
         │
-        ▼
 v3.0 ✓ Chain Synchronization
         │
-v4.0 Persistence
+v4.0 ✓ Persistence
         │
+        ▼
 v5.0 Transaction Mempool
         │
 v6.0 Tokio Async Networking
@@ -243,18 +249,17 @@ June    ✓ v1.0 Blockchain Fundamentals
         ✓ v2.0 Bitcoin-style UTXO Model
         ✓ v2.1 Documentation & Rustdoc
         ✓ v3.0 Chain Synchronization
+        ✓ v4.0 Persistence
 
         Core Platform
         ─────────────
-        v4.0 Persistence
-            ↓
         v5.0 Transaction Mempool
             ↓
-July    v6.0 Tokio Async Networking
-
+        v6.0 Tokio Async Networking
+            ↓
         Track A: Enterprise DLT (Primary)
         ─────────────────────────────────
-        v7A Permissioned Network
+July    v7A Permissioned Network
             ↓
         v8A Asset Tokenization
             ↓
@@ -285,7 +290,6 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No persistent blockchain storage yet (`v4.0`)
 - No transaction mempool yet (`v5.0`)
 - No asynchronous networking via Tokio yet (`v6.0`)
 - No permissioned network controls yet
@@ -300,6 +304,7 @@ This implementation is still evolving. The current codebase intentionally omits 
 - Peer discovery and automatic synchronization are not yet implemented
 - Proof-of-work difficulty is treated as a simple configurable prefix target
 - The wallet is in-memory only and does not persist keys
+- Persistence currently uses a simple JSON file rather than a production database
 
 ## Testing
 
@@ -308,8 +313,7 @@ Run the full test suite with:
 ```bash
 cargo test
 ```
-
-Current tests cover:
+Current test suite includes 24 integration tests covering:
 
 ### Blockchain Validation
 
@@ -338,6 +342,12 @@ Current tests cover:
 - Shorter chain rejection
 - Invalid chain rejection
 
+### Persistence
+
+- Blockchain file creation
+- Saved blockchain loading
+- Loaded blockchain validation
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
@@ -350,6 +360,7 @@ Current tests cover:
 - `src/tx_output.rs` - spendable transaction outputs
 - `src/utxo.rs` - in-memory unspent output tracking and validation
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
+- `src/storage.rs` - JSON-based blockchain persistence helpers
 - `tests/blockchain_tests.rs` - integration coverage for blockchain and UTXO behavior
 
 ## Technologies
@@ -394,10 +405,11 @@ The current implementation includes:
 - TCP peer-to-peer networking
 - Peer chain synchronization
 - Longest-chain replacement
+- JSON-based blockchain persistence
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will focus on persistent storage, transaction mempool management, asynchronous networking with Tokio, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
+Future releases will focus on transaction mempool management, asynchronous networking with Tokio, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
 
 ## References
 
