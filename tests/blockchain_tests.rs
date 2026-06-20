@@ -740,7 +740,7 @@ fn loaded_blockchain_passes_validation() {
 fn mempool_accepts_transaction() {
     let mut mempool = Mempool::new();
 
-    let alice = Wallet::new();
+    //let alice = Wallet::new();
     let bob = Wallet::new();
 
     let transaction = Transaction::new(
@@ -751,8 +751,32 @@ fn mempool_accepts_transaction() {
         }],
     );
 
-    mempool.add_transaction(transaction);
-
+    assert!(mempool.add_transaction(transaction));
     assert_eq!(mempool.len(), 1);
     assert!(!mempool.is_empty());
+}
+
+#[test]
+fn mempool_rejects_invalid_transaction() {
+    let mut mempool = Mempool::new();
+
+    let alice = Wallet::new();
+    let bob = Wallet::new();
+
+    let transaction = Transaction::new(
+        vec![TxInput {
+            previous_tx_id: "fake_tx".to_string(),
+            output_index: 0,
+            sender_public_key: alice.public_key_hex(),
+            signature: None,
+        }],
+        vec![TxOutput {
+            recipient: bob.public_key_hex(),
+            amount: 10,
+        }],
+    );
+
+    assert!(!mempool.add_transaction(transaction));
+    assert_eq!(mempool.len(), 0);
+    assert!(mempool.is_empty());
 }

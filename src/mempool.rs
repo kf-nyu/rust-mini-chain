@@ -24,8 +24,14 @@ impl Mempool {
         self.transactions.is_empty()
     }
 
-    /// Adds a transaction to the mempool.
-    pub fn add_transaction(&mut self, transaction: Transaction) {
+    /// Adds a transaction to the mempool if it passes basic signature validation.
+    pub fn add_transaction(&mut self, transaction: Transaction) -> bool {
+        if !transaction.verify() {
+            return false;
+        }
+
         self.transactions.push(transaction);
+
+        true
     }
 }
