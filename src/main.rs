@@ -1,3 +1,4 @@
+use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network;
@@ -6,8 +7,18 @@ use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::wallet::Wallet;
 use std::time::Instant;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = std::env::args().collect();
+
+    // CLI mode: run as an async TCP node that listens for incoming blocks.
+    if args.len() >= 3 && args[1] == "async-node" {
+        let port = args[2].parse::<u16>().unwrap();
+
+        async_network::start_async_node(port).await.unwrap();
+
+        return;
+    }
 
     // CLI mode: run as a TCP node that listens for incoming blocks.
     if args.len() >= 3 && args[1] == "node" {
