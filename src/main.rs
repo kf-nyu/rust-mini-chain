@@ -1,4 +1,5 @@
 use rust_mini_chain::blockchain::Blockchain;
+use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_output::TxOutput;
@@ -57,6 +58,58 @@ fn main() {
         let block = blockchain.chain.last().unwrap();
 
         network::send_block(&args[2], block);
+
+        return;
+    }
+
+    // CLI mode: mempool demo
+    if args.len() >= 2 && args[1] == "mempool-demo" {
+        let mut blockchain = Blockchain::new(4);
+        let mut mempool = Mempool::new();
+
+        let alice = Wallet::new();
+        let bob = Wallet::new();
+
+        let coinbase = Transaction::new(
+            vec![],
+            vec![TxOutput {
+                recipient: alice.public_key_hex(),
+                amount: 50,
+            }],
+        );
+
+        let mut tx1 = Transaction::new_utxo_spend(
+            coinbase.id.clone(),
+            0,
+            alice.public_key_hex(),
+            bob.public_key_hex(),
+            10,
+            alice.public_key_hex(),
+            40,
+        );
+
+        tx1.sign(&alice.signing_key);
+
+        blockchain.add_block(vec![coinbase]);
+
+        println!("Mempool before add: {}", mempool.len());
+
+        if mempool.add_transaction(tx1) {
+            println!("Transaction added to mempool");
+        }
+
+        println!("Mempool after add: {}", mempool.len());
+
+        let selected = mempool.select_transactions(1);
+
+        println!("Selected {} transaction(s) for mining", selected.len());
+
+        blockchain.add_block(selected.clone());
+
+        mempool.remove_transactions(&selected);
+
+        println!("Mempool after mining: {}", mempool.len());
+        println!("Blockchain valid: {}", blockchain.is_valid());
 
         return;
     }
