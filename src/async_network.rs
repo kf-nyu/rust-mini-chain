@@ -16,7 +16,7 @@ pub async fn send_async_message(
     Ok(())
 }
 
-///Starts an asynchronous TCP node using Tokio.
+/// Starts an asynchronous TCP node using Tokio.
 pub async fn start_async_node(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(format!("127.0.0.1:{port}")).await?;
 
@@ -26,16 +26,7 @@ pub async fn start_async_node(port: u16) -> Result<(), Box<dyn std::error::Error
         let (mut stream, _) = listener.accept().await?;
 
         tokio::spawn(async move {
-            let mut buffer = String::new();
-
-            if let Err(error) = stream.read_to_string(&mut buffer).await {
-                eprintln!("Failed to read async message: {error}");
-                return;
-            }
-
-            let message: Result<NetworkMessage, _> = serde_json::from_str(&buffer);
-
-            match message {
+            match read_message(&mut stream).await {
                 Ok(NetworkMessage::Block(block)) => {
                     println!("Async received block {}", block.index);
                 }
@@ -54,4 +45,17 @@ pub async fn start_async_node(port: u16) -> Result<(), Box<dyn std::error::Error
             }
         });
     }
+}
+
+/// Reads and deserialized a network message from an async TCP stream.
+pub async fn read_message(
+    stream: &mut TcpStream,
+) -> Result<NetworkMessage, Box<dyn std::error::Error>> {
+    let mut buffer = String::new();
+
+    stream.read_to_string(&mut buffer).await?;
+
+    let message = serde_json::from_str(&buffer)?;
+
+    Ok(message)
 }
