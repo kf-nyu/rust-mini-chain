@@ -2,6 +2,8 @@
 pub mod block;
 /// Blockchain container and chain-wide validation rules.
 pub mod blockchain;
+/// Pending transaction pool used before block mining.
+pub mod mempool;
 /// Merkle tree hashing helpers for block transaction roots.
 pub mod merkle;
 /// Simple TCP networking helpers for sending and receiving blocks.
