@@ -1,3 +1,4 @@
+use crate::block::Block;
 use crate::network_message::NetworkMessage;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -58,4 +59,18 @@ pub async fn read_message(
     let message = serde_json::from_str(&buffer)?;
 
     Ok(message)
+}
+
+/// Sends a block asynchronously using the network message protocol.
+pub async fn send_async_block(
+    address: &str,
+    block: &Block,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let message = NetworkMessage::Block(block.clone());
+
+    send_async_message(address, &message).await?;
+
+    println!("Sent async block {} to {address}", block.index);
+
+    Ok(())
 }
