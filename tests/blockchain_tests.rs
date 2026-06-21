@@ -1,5 +1,7 @@
+use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
+use rust_mini_chain::network_message::NetworkMessage;
 use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
@@ -7,6 +9,7 @@ use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::utxo::UTXOSet;
 use rust_mini_chain::wallet::Wallet;
 use std::fs;
+use tokio::io::AsyncWriteExt;
 
 fn signed_transaction(
     previous_tx_id: &str,
@@ -925,4 +928,34 @@ fn mempool_lifecycle_mines_and_removes_transactions() {
 
     assert!(mempool.is_empty());
     assert!(blockchain.is_valid());
+}
+
+#[tokio::test]
+async fn test_async_request_response() {
+    let port = 7100;
+    let address = format!("127.0.0.1:{port}");
+
+    tokio::spawn(async move {
+        let _ = async_network::start_async_node(port).await;
+    });
+
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+    let mut stream = tokio::net::TcpStream::connect(&address).await.unwrap();
+
+    async_network::write_message(&mut stream, &NetworkMessage::ChainRequest)
+        .await
+        .unwrap();
+
+    stream.shutdown().await.unwrap();
+
+    let response = async_network::read_message(&mut stream).await.unwrap();
+
+    match response {
+        NetworkMessage::ChainResponse(blockchain) => {
+            assert_eq!(blockchain.chain.len(), 2);
+            assert!(blockchain.is_valid());
+        }
+        other => panic!("Expected ChainResponse, got {other:?}"),
+    }
 }
