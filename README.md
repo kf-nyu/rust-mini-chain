@@ -56,9 +56,17 @@ cargo run -- request 127.0.0.1:6000
 cargo run -- mempool-demo
 ```
 
+### Run the Tokio CLI demo
+
+Run a complete async networking demo:
+
+```bash
+cargo run -- async-demo 127.0.0.1:7000
+```
+
 ## Current Features
 
-Current release: `v5.0.0`
+Current release: `v6.0.0`
 
 ### Blockchain Core
 
@@ -109,15 +117,22 @@ Current release: `v5.0.0`
 - [x] Removal of mined transactions
 - [x] Mempool lifecycle CLI demo
 
+### Async Networking
+
+- [x] Tokio-based asynchronous TCP networking
+- [x] Async node listener with `TcpListener`
+- [x] Concurrent connection handling with `tokio::spawn`
+- [x] Async network message read/write helpers
+- [x] Async block propagation
+- [x] Async ChainRequest / ChainResponse messaging
+- [x] Tokio networking CLI demo
+- [x] Async networking integration test
+
 ### Engineering
 
 - [x] Modular Rust project structure
 - [x] Unit and integration tests
 - [x] Rustdoc documentation
-
-### Planned
-
-- [ ] Tokio async networking (`v6.0`)
 
 ### Future Track A: Enterprise DLT
 
@@ -224,8 +239,7 @@ v4.0 ✓ Persistence
         │
 v5.0 ✓ Transaction Mempool
         │
-        ▼
-v6.0 Tokio Async Networking
+v6.0 ✓ Tokio Async Networking
         │
         ├─────────────────────┐
         │                     │
@@ -257,7 +271,7 @@ v12A Audit &
 
 ```text
 2026
-        Completed
+        Core Platform Completed
         ─────────────────
 June    ✓ v1.0 Blockchain Fundamentals
         ✓ v1.1 TCP Networking
@@ -266,10 +280,7 @@ June    ✓ v1.0 Blockchain Fundamentals
         ✓ v3.0 Chain Synchronization
         ✓ v4.0 Persistence
         ✓ v5.0 Transaction Mempool
-
-        Core Platform
-        ─────────────
-        v6.0 Tokio Async Networking
+        ✓ v6.0 Tokio Async Networking
             ↓
         Track A: Enterprise DLT (Primary)
         ─────────────────────────────────
@@ -304,7 +315,6 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No asynchronous networking via Tokio yet (`v6.0`)
 - No permissioned network controls yet
 - No asset tokenization or settlement workflows yet
 - No custody or compliance layers yet
@@ -327,7 +337,7 @@ Run the full test suite with:
 cargo test
 ```
 
-Current test suite includes 30 integration tests covering:
+Current test suite includes 31 integration tests covering:
 
 ### Blockchain Validation
 
@@ -371,6 +381,14 @@ Current test suite includes 30 integration tests covering:
 - Mined transaction removal
 - Full mempool lifecycle validation
 
+### Async Networking
+
+- Tokio async ChainRequest / ChainResponse validation
+- Async TCP request handling
+- Async network message serialization/deserialization
+- Returned blockchain length validation
+- Returned blockchain integrity validation
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
@@ -378,6 +396,7 @@ Current test suite includes 30 integration tests covering:
 - `src/merkle.rs` - Merkle hashing helpers
 - `src/network_message.rs` - protocol messages exchanged between peers
 - `src/network.rs` - TCP networking, chain requests, responses, and synchronization
+- `src/async_network.rs` - Tokio-based asynchronous networking, block propagation, and chain request/response handling
 - `src/transaction.rs` - UTXO transaction creation, signing, and verification
 - `src/tx_input.rs` - transaction inputs that reference prior outputs
 - `src/tx_output.rs` - spendable transaction outputs
@@ -385,7 +404,7 @@ Current test suite includes 30 integration tests covering:
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
 - `src/mempool.rs` - in-memory pending transaction pool
-- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, and mempool behavior
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, and async networking behavior
 
 ## Technologies
 
@@ -410,6 +429,7 @@ Current test suite includes 30 integration tests covering:
 ### Networking
 
 - TCP sockets via `std::net`
+- Asynchronous networking via Tokio (`tokio::net`)
 
 ### Testing
 
@@ -427,16 +447,18 @@ The current implementation includes:
 - Bitcoin-style UTXO transaction processing
 - Merkle tree verification
 - TCP peer-to-peer networking
+- Tokio-based asynchronous networking
 - Peer chain synchronization
 - Longest-chain replacement
+- Async block propagation and chain request/response handling
 - JSON-based blockchain persistence
 - In-memory transaction mempool
 - Mempool transaction selection and removal
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will focus on asynchronous networking with Tokio, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
-
+Future releases will focus on peer discovery, multi-node coordination, automated synchronization, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
+ 
 ## References
 
 ### Blockchain Foundations
@@ -477,7 +499,7 @@ The implementation draws inspiration from:
 - Bitcoin's UTXO model, proof-of-work consensus mechanism, and decentralized ledger architecture
 - The Rust open-source ecosystem and community
 - Research and industry developments in Distributed Ledger Technology (DLT), digital assets, custody, settlement, and tokenization
-- Graduate coursework at NYU Tandon School of Engineering, including blockchain, operating systems, cryptography, privacy, machine/deep learning, big data and application security
+- Graduate coursework at NYU Tandon School of Engineering, including blockchain, operating systems, cryptography, privacy, machine learning, deep learning, big data and application security
 
 Any errors, omissions, simplifications, or design decisions remain solely the responsibility of the author.
 
