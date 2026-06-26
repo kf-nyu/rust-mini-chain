@@ -2,6 +2,8 @@ use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network;
+use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
+use rust_mini_chain::peer_registry::PeerRegistry;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::wallet::Wallet;
@@ -223,6 +225,35 @@ async fn main() {
 
         println!("Mempool after mining: {}", mempool.len());
         println!("Blockchain valid: {}", blockchain.is_valid());
+
+        return;
+    }
+
+    //Demostrate a permissoned network by comparing a trusted peer
+    //with an unregistered peer during membership verification.
+    if args.len() >= 2 && args[1] == "permissioned-demo" {
+        let trusted_identity = NodeIdentity::new("validator-1".to_string(), NodeRole::Validator);
+
+        let untrusted_identity = NodeIdentity::new("validator-2".to_string(), NodeRole::Validator);
+
+        let mut registry = PeerRegistry::new();
+
+        println!("Permissioned network demo");
+        println!("Registering trusted peer: {}", trusted_identity.node_id);
+
+        registry.add_peer(trusted_identity.clone());
+
+        println!(
+            "Trusted peer accepted: {}",
+            registry.is_trusted(&trusted_identity.node_id)
+        );
+
+        println!(
+            "Untrusted peer accepted: {}",
+            registry.is_trusted(&untrusted_identity.node_id)
+        );
+
+        println!("Permissoned demo complete");
 
         return;
     }
