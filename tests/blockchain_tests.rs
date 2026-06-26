@@ -991,3 +991,21 @@ fn peer_registry_rejects_duplicate_peer() {
     assert!(!registry.add_peer(peer));
     assert_eq!(registry.len(), 1);
 }
+
+#[test]
+fn network_message_hello_round_trip() {
+    let identity = NodeIdentity::new("validattor-1".to_string(), NodeRole::Validator);
+
+    let message = NetworkMessage::Hello(identity.clone());
+
+    let json = serde_json::to_string(&message).unwrap();
+
+    let decoded: NetworkMessage = serde_json::from_str(&json).unwrap();
+
+    match decoded {
+        NetworkMessage::Hello(node) => {
+            assert_eq!(node, identity);
+        }
+        other => panic!("Expected Hello message, got {other:?}"),
+    }
+}

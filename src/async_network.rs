@@ -32,6 +32,12 @@ pub async fn start_async_node(port: u16) -> Result<(), Box<dyn std::error::Error
 
         tokio::spawn(async move {
             match read_message(&mut stream).await {
+                Ok(NetworkMessage::Hello(identity)) => {
+                    println!(
+                        "Async received hello from node {} with role {:?}",
+                        identity.node_id, identity.role
+                    );
+                }
                 Ok(NetworkMessage::Block(block)) => {
                     println!("Async received block {}", block.index);
                 }
