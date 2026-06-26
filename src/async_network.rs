@@ -1,6 +1,7 @@
 use crate::block::Block;
 use crate::blockchain::Blockchain;
 use crate::network_message::NetworkMessage;
+use crate::peer_registry::PeerRegistry;
 use crate::transaction::Transaction;
 use crate::tx_output::TxOutput;
 use crate::wallet::Wallet;
@@ -145,4 +146,17 @@ pub async fn send_async_chain_request(
     }
 
     Ok(())
+}
+
+/// Reads a Hello message from a peer and verifies it against the trusted peer registry.
+pub async fn read_permissioned_handshake(
+    stream: &mut TcpStream,
+    registry: &PeerRegistry,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    let message = read_message(stream).await?;
+
+    match message {
+        NetworkMessage::Hello(identity) => Ok(registry.is_trusted(&identity.node_id)),
+        _ => Ok(false),
+    }
 }

@@ -1009,3 +1009,37 @@ fn network_message_hello_round_trip() {
         other => panic!("Expected Hello message, got {other:?}"),
     }
 }
+
+#[tokio::test]
+async fn permissioned_handshake_accepts_trusted_peer() {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+
+    let trusted_identity = NodeIdentity::new("validator-1".to_string(), NodeRole::Validator);
+
+    let mut registry = PeerRegistry::new();
+    assert!(registry.add_peer(trusted_identity.clone()));
+
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+
+        let accepted = async_network::read_permissioned_handshake(&mut stream, &registry)
+            .await
+            .unwrap();
+
+        assert!(accepted);
+    });
+
+    let mut stream = tokio::net::TcpStream::connect(&address).await.unwrap();
+
+    async_network::write_message(&mut stream, &NetworkMessage::Hello(trusted_identity))
+        .await
+        .unwrap();
+
+    stream.shutdown().await.unwrap();
+
+    server.await.unwrap();
+}
