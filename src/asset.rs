@@ -69,3 +69,22 @@ impl AssetOwnership {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AssetTransfer {
+    pub asset_id: String,
+    pub from: String,
+    pub to: String,
+    pub quantity: u64,
+}
+
+impl AssetTransfer {
+    pub fn new(asset_id: String, from: String, to: String, quantity: u64) -> Self {
+        Self {
+            asset_id,
+            from,
+            to,
+            quantity,
+        }
+    }
+}

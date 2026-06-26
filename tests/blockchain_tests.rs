@@ -1,4 +1,4 @@
-use rust_mini_chain::asset::{Asset, AssetIssuance, AssetOwnership, AssetType};
+use rust_mini_chain::asset::{Asset, AssetIssuance, AssetOwnership, AssetTransfer, AssetType};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
@@ -1140,4 +1140,19 @@ fn asset_ownership_tracks_owner_and_quantity() {
     assert_eq!(ownership.asset_id, "asset-1");
     assert_eq!(ownership.owner, "wallet-1");
     assert_eq!(ownership.quantity, 500);
+}
+
+#[test]
+fn asset_transfer_tracks_sender_receiver_and_quantity() {
+    let transfer = AssetTransfer::new(
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        250,
+    );
+
+    assert_eq!(transfer.asset_id, "asset-1");
+    assert_eq!(transfer.from, "wallet-1");
+    assert_eq!(transfer.to, "wallet-2");
+    assert_eq!(transfer.quantity, 250);
 }
