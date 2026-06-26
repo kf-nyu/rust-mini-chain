@@ -40,3 +40,15 @@ impl Asset {
         self.asset_type == AssetType::NonFungible
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AssetIssuance {
+    pub asset: Asset,
+    pub issuer: String,
+}
+
+impl AssetIssuance {
+    pub fn new(asset: Asset, issuer: String) -> Self {
+        Self { asset, issuer }
+    }
+}

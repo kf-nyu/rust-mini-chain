@@ -1,4 +1,4 @@
-use rust_mini_chain::asset::{Asset, AssetType};
+use rust_mini_chain::asset::{Asset, AssetIssuance, AssetType};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
@@ -1115,4 +1115,20 @@ fn asset_model_tracks_non_fungible_asset() {
 
     assert!(!asset.is_fungible());
     assert!(asset.is_non_fungible());
+}
+
+#[test]
+fn asset_issuance_tracks_asset_and_issuer() {
+    let asset = Asset::new(
+        "asset-1".to_string(),
+        "Digital Dollar".to_string(),
+        "DUSD".to_string(),
+        AssetType::Fungible,
+        1_000_000,
+    );
+
+    let issuance = AssetIssuance::new(asset.clone(), "issuer-1".to_string());
+
+    assert_eq!(issuance.asset, asset);
+    assert_eq!(issuance.issuer, "issuer-1");
 }
