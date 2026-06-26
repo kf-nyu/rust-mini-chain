@@ -1,4 +1,4 @@
-use rust_mini_chain::asset::{Asset, AssetIssuance, AssetType};
+use rust_mini_chain::asset::{Asset, AssetIssuance, AssetOwnership, AssetType};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
@@ -1131,4 +1131,13 @@ fn asset_issuance_tracks_asset_and_issuer() {
 
     assert_eq!(issuance.asset, asset);
     assert_eq!(issuance.issuer, "issuer-1");
+}
+
+#[test]
+fn asset_ownership_tracks_owner_and_quantity() {
+    let ownership = AssetOwnership::new("asset-1".to_string(), "wallet-1".to_string(), 500);
+
+    assert_eq!(ownership.asset_id, "asset-1");
+    assert_eq!(ownership.owner, "wallet-1");
+    assert_eq!(ownership.quantity, 500);
 }

@@ -52,3 +52,20 @@ impl AssetIssuance {
         Self { asset, issuer }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AssetOwnership {
+    pub asset_id: String,
+    pub owner: String,
+    pub quantity: u64,
+}
+
+impl AssetOwnership {
+    pub fn new(asset_id: String, owner: String, quantity: u64) -> Self {
+        Self {
+            asset_id,
+            owner,
+            quantity,
+        }
+    }
+}
