@@ -14,6 +14,8 @@ pub mod network;
 pub mod network_message;
 /// Add node identity for permissioned network
 pub mod node_identity;
+/// trusted peer registry
+pub mod peer_registry;
 /// File-based blockchain persistence helper.
 pub mod storage;
 /// UTXO-style transaction creation, signing, and verification.
