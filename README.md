@@ -64,9 +64,15 @@ Run a complete async networking demo:
 cargo run -- async-demo 127.0.0.1:7000
 ```
 
+### Run the permissioned network demo
+
+```bash
+cargo run -- permissioned-demo
+```
+
 ## Current Features
 
-Current release: `v6.0.0`
+Current release: `v7.0.0`
 
 ### Blockchain Core
 
@@ -98,7 +104,14 @@ Current release: `v6.0.0`
 - [x] ChainRequest / ChainResponse messaging
 - [x] Peer chain validation
 - [x] Longest-chain replacement rule
+- [x] Tokio asynchronous networking
+- [x] Asynchronous block propagation
+- [x] Asynchronous chain request/response
+- [x] Permissioned node identity
+- [x] Trusted peer registry
+- [x] Permissioned handshake protocol
 - [x] Chain synchronization CLI demo
+- [x] Permissioned network CLI demo
 
 ### Persistence
 
@@ -117,16 +130,17 @@ Current release: `v6.0.0`
 - [x] Removal of mined transactions
 - [x] Mempool lifecycle CLI demo
 
-### Async Networking
+### Permissioned Networking
 
-- [x] Tokio-based asynchronous TCP networking
-- [x] Async node listener with `TcpListener`
-- [x] Concurrent connection handling with `tokio::spawn`
-- [x] Async network message read/write helpers
-- [x] Async block propagation
-- [x] Async ChainRequest / ChainResponse messaging
-- [x] Tokio networking CLI demo
-- [x] Async networking integration test
+Permissioned networking means that nodes do not accept every peer by default. Each peer presents a node identity during the handshake, and the receiving node checks that identity against a trusted peer registry before accepting the connection.
+
+- [x] Node identity abstraction
+- [x] Validator, Observer, and Admin roles
+- [x] Trusted peer registry
+- [x] Hello(NodeIdentity) protocol message
+- [x] Permissioned handshake validation
+- [x] Trusted peer acceptance
+- [x] Untrusted peer rejection
 
 ### Engineering
 
@@ -136,7 +150,7 @@ Current release: `v6.0.0`
 
 ### Future Track A: Enterprise DLT
 
-- [ ] Permissioned network
+- [x] Permissioned network
 - [ ] Asset tokenization
 - [ ] Settlement engine
 - [ ] Custody controls
@@ -214,6 +228,8 @@ Chain synchronization validation additionally checks:
 - Only valid longer chains may replace the local chain
 - Shorter chains are rejected by the longest-chain rule
 
+Permissioned networking additionally validates node identity against the trusted peer registry before accepting participation in the network.
+
 Validation is performed during:
 
 - Local blockchain verification
@@ -248,7 +264,7 @@ v6.0 ✓ Tokio Async Networking
 Track A                 Track B
 Enterprise DLT          Public Blockchain
 
-v7A Permissioned        v7B Difficulty
+v7A ✓ Permissioned      v7B Difficulty
     Network                 Adjustment
 
 v8A Asset               v8B Rewards
@@ -284,7 +300,7 @@ June    ✓ v1.0 Blockchain Fundamentals
             ↓
         Track A: Enterprise DLT (Primary)
         ─────────────────────────────────
-        v7A Permissioned Network
+        ✓ v7A Permissioned Network
             ↓
         v8A Asset Tokenization
             ↓
@@ -315,7 +331,6 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No permissioned network controls yet
 - No asset tokenization or settlement workflows yet
 - No custody or compliance layers yet
 - No smart contracts or advanced consensus features yet
@@ -337,7 +352,7 @@ Run the full test suite with:
 cargo test
 ```
 
-Current test suite includes 31 integration tests covering:
+Current test suite includes 37 integration tests covering:
 
 ### Blockchain Validation
 
@@ -389,12 +404,23 @@ Current test suite includes 31 integration tests covering:
 - Returned blockchain length validation
 - Returned blockchain integrity validation
 
+### Permissioned Networking
+
+- Trusted peer registration
+- Duplicate peer rejection
+- Node identity validation
+- Hello message serialization
+- Trusted handshake acceptance
+- Untrusted handshake rejection
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
 - `src/blockchain.rs` - blockchain container and chain-wide validation
 - `src/merkle.rs` - Merkle hashing helpers
 - `src/network_message.rs` - protocol messages exchanged between peers
+- `src/node_identity.rs` - permissioned node identity and network roles
+- `src/peer_registry.rs` - trusted peer membership registry
 - `src/network.rs` - TCP networking, chain requests, responses, and synchronization
 - `src/async_network.rs` - Tokio-based asynchronous networking, block propagation, and chain request/response handling
 - `src/transaction.rs` - UTXO transaction creation, signing, and verification
@@ -404,7 +430,7 @@ Current test suite includes 31 integration tests covering:
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
 - `src/mempool.rs` - in-memory pending transaction pool
-- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, and async networking behavior
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, and permissioned networking behavior
 
 ## Technologies
 
@@ -447,47 +473,52 @@ The current implementation includes:
 - Bitcoin-style UTXO transaction processing
 - Merkle tree verification
 - TCP peer-to-peer networking
-- Tokio-based asynchronous networking
+- Tokio asynchronous networking
+- Permissioned node identity
+- Trusted peer registry
+- Permissioned network handshake
 - Peer chain synchronization
 - Longest-chain replacement
-- Async block propagation and chain request/response handling
 - JSON-based blockchain persistence
 - In-memory transaction mempool
 - Mempool transaction selection and removal
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will focus on peer discovery, multi-node coordination, automated synchronization, and enterprise DLT capabilities including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance frameworks.
- 
+Future releases will extend the permissioned networking foundation with enterprise DLT capabilities, including asset tokenization, custody controls, settlement workflows, and policy-driven authorization.
+
 ## References
 
 ### Blockchain Foundations
 
-1. Ralph C. Merkle, *Protocols for Public Key Cryptosystems*, Proceedings of the IEEE Symposium on Security and Privacy, 1980.
-2. Satoshi Nakamoto, *Bitcoin: A Peer-to-Peer Electronic Cash System*, 2008.
-3. Andreas M. Antonopoulos, *Mastering Bitcoin: Programming the Open Blockchain*, O'Reilly Media.
+- [1] R. C. Merkle, "Protocols for public key cryptosystems," in *Proc. 1980 IEEE Symposium on Security and Privacy*, Oakland, CA, USA, 1980, pp. 122-134, doi: [10.1109/SP.1980.10006](https://doi.org/10.1109/SP.1980.10006).
+- [2] S. Nakamoto, "Bitcoin: A Peer-to-Peer Electronic Cash System," 2008. Available: https://www.bitcoin.org/bitcoin.pdf.
+- [3] A. M. Antonopoulos and D. A. Harding, *Mastering Bitcoin: Programming the Open Blockchain*, 3rd ed. Sebastopol, CA, USA: O'Reilly Media, 2023. Available: https://github.com/bitcoinbook/bitcoinbook.
 
 ### Distributed Systems
 
-4. Martin Kleppmann, *Designing Data-Intensive Applications*, O'Reilly Media.
-5. Andrew S. Tanenbaum and Maarten van Steen, *Distributed Systems: Principles and Paradigms*.
+- [4] M. Kleppmann, *Designing Data-Intensive Applications*. Sebastopol, CA, USA: O'Reilly Media, 2017. Available: https://dataintensive.net/.
+- [5] M. van Steen and A. S. Tanenbaum, *Distributed Systems*, 4th ed. distributed-systems.net, 2023. Available: https://www.distributed-systems.net/index.php/books/ds4/.
 
 ### Rust
 
-6. Steve Klabnik and Carol Nichols, *The Rust Programming Language*, No Starch Press.
-7. Jon Gjengset, *Rust for Rustaceans*, No Starch Press.
+- [6] S. Klabnik, C. Nichols, and C. Krycho, *The Rust Programming Language*. The Rust Project Developers. Available: https://doc.rust-lang.org/stable/book/.
+- [7] J. Gjengset, *Rust for Rustaceans: Idiomatic Programming for Experienced Developers*. San Francisco, CA, USA: No Starch Press, 2021. Available: https://nostarch.com/rust-rustaceans.
+- [8] The Rust Project Developers, *The Rust Reference*. Available: https://doc.rust-lang.org/reference/.
+- [9] The Rust Project Developers, *The Rustonomicon*. Available: https://doc.rust-lang.org/nomicon/.
 
 ### Enterprise Digital Assets and DLT
 
-8. The Linux Foundation, *Hyperledger Fabric Documentation*.
-9. Digital Asset, *Canton Architecture and Synchronizer Protocol Documentation*.
-10. DTCC, *The Digital Asset Securities Control Principles (DASCP)*.
-11. BIS (Bank for International Settlements), *Project Agora*, *Project Helvetia*, and related reports on tokenized financial market infrastructure.
+- [10] The Linux Foundation, *Hyperledger Fabric Documentation*. Available: https://hyperledger-fabric.readthedocs.io/en/latest/index.html.
+- [11] Digital Asset, *Canton Protocol Specification* and *Synchronizer Overview*. Available: https://docs.canton.network/overview/reference/canton-protocol-specification and https://docs.canton.network/overview/reference/synchronizer-overview.
+- [12] DTCC, Clearstream, Euroclear, and Boston Consulting Group, *Digital Asset Securities Control Principles: A Framework for Adoption*, 2024. Available: https://www.dtcc.com/-/media/DASCPWhitePaper.pdf.
+- [13] Bank for International Settlements and Institute of International Finance, *Project Agora: A Shared Programmable Platform for Wholesale Cross-Border Payments*, BIS Innovation Hub Other Papers, no. 110, 2026. Available: https://www.bis.org/publ/othp110.htm.
+- [14] Bank for International Settlements, Swiss National Bank, and SIX, *Project Helvetia Phase II: Settling Tokenised Assets in Wholesale CBDC*, BIS Innovation Hub, 2022. Available: https://www.bis.org/publ/othp45.pdf.
 
 ### Cryptography
 
-12. Jonathan Katz and Yehuda Lindell, *Introduction to Modern Cryptography*.
-13. Christof Paar and Jan Pelzl, *Understanding Cryptography*.
+- [15] J. Katz and Y. Lindell, *Introduction to Modern Cryptography*, rev. 3rd ed. Boca Raton, FL, USA: CRC Press, 2025. Available: https://www.routledge.com/Introduction-to-Modern-Cryptography-Revised-Third-Edition/Katz-Lindell/p/book/9781032496795.
+- [16] C. Paar and J. Pelzl, *Understanding Cryptography: A Textbook for Students and Practitioners*. Berlin, Germany: Springer, 2010, doi: [10.1007/978-3-642-04101-3](https://doi.org/10.1007/978-3-642-04101-3).
 
 ## Acknowledgments
 

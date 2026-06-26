@@ -2,6 +2,8 @@ use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
+use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
+use rust_mini_chain::peer_registry::PeerRegistry;
 use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
@@ -958,4 +960,120 @@ async fn test_async_request_response() {
         }
         other => panic!("Expected ChainResponse, got {other:?}"),
     }
+}
+
+#[test]
+fn node_identity_tracks_role() {
+    let node = NodeIdentity::new("node-1".to_string(), NodeRole::Validator);
+
+    assert_eq!(node.node_id, "node-1");
+    assert!(node.is_validator());
+}
+
+#[test]
+fn peer_registry_adds_trusted_peer() {
+    let mut registry = PeerRegistry::new();
+
+    let peer = NodeIdentity::new("validator-1".to_string(), NodeRole::Validator);
+
+    assert!(registry.add_peer(peer));
+    assert_eq!(registry.len(), 1);
+    assert!(registry.is_trusted("validator-1"));
+}
+
+#[test]
+fn peer_registry_rejects_duplicate_peer() {
+    let mut registry = PeerRegistry::new();
+
+    let peer = NodeIdentity::new("validator-1".to_string(), NodeRole::Validator);
+
+    assert!(registry.add_peer(peer.clone()));
+    assert!(!registry.add_peer(peer));
+    assert_eq!(registry.len(), 1);
+}
+
+#[test]
+fn network_message_hello_round_trip() {
+    let identity = NodeIdentity::new("validattor-1".to_string(), NodeRole::Validator);
+
+    let message = NetworkMessage::Hello(identity.clone());
+
+    let json = serde_json::to_string(&message).unwrap();
+
+    let decoded: NetworkMessage = serde_json::from_str(&json).unwrap();
+
+    match decoded {
+        NetworkMessage::Hello(node) => {
+            assert_eq!(node, identity);
+        }
+        other => panic!("Expected Hello message, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn permissioned_handshake_accepts_trusted_peer() {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+
+    let trusted_identity = NodeIdentity::new("validator-1".to_string(), NodeRole::Validator);
+
+    let mut registry = PeerRegistry::new();
+    assert!(registry.add_peer(trusted_identity.clone()));
+
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+
+        let accepted = async_network::read_permissioned_handshake(&mut stream, &registry)
+            .await
+            .unwrap();
+
+        assert!(accepted);
+    });
+
+    let mut stream = tokio::net::TcpStream::connect(&address).await.unwrap();
+
+    async_network::write_message(&mut stream, &NetworkMessage::Hello(trusted_identity))
+        .await
+        .unwrap();
+
+    stream.shutdown().await.unwrap();
+
+    server.await.unwrap();
+}
+
+#[tokio::test]
+async fn permissioned_handshake_rejects_untrusted_peer() {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+
+    let untrusted_identity =
+        NodeIdentity::new("unknown-validator".to_string(), NodeRole::Validator);
+
+    let registry = PeerRegistry::new();
+
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+
+        let accepted = async_network::read_permissioned_handshake(&mut stream, &registry)
+            .await
+            .unwrap();
+
+        assert!(!accepted);
+    });
+
+    let mut stream = tokio::net::TcpStream::connect(&address).await.unwrap();
+
+    async_network::write_message(&mut stream, &NetworkMessage::Hello(untrusted_identity))
+        .await
+        .unwrap();
+
+    stream.shutdown().await.unwrap();
+
+    server.await.unwrap();
 }

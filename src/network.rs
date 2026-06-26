@@ -37,6 +37,13 @@ pub fn start_node(port: u16) {
         let message: NetworkMessage = serde_json::from_str(&buffer).unwrap();
 
         match message {
+            NetworkMessage::Hello(identity) => {
+                println!(
+                    "Received hello from node {} with role {:?}",
+                    identity.node_id, identity.role
+                );
+            }
+
             NetworkMessage::Block(block) => {
                 println!("Received block {}", block.index);
                 println!("Hash: {}", block.hash);
