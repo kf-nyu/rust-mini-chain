@@ -12,6 +12,8 @@ pub mod merkle;
 pub mod network;
 /// Defines the network protocol used for communication and synchronization between blockchain nodes.
 pub mod network_message;
+/// Add node identity for permissioned network
+pub mod node_identity;
 /// File-based blockchain persistence helper.
 pub mod storage;
 /// UTXO-style transaction creation, signing, and verification.

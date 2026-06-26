@@ -2,6 +2,7 @@ use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
+use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
 use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
@@ -958,4 +959,12 @@ async fn test_async_request_response() {
         }
         other => panic!("Expected ChainResponse, got {other:?}"),
     }
+}
+
+#[test]
+fn node_identity_track_role() {
+    let node = NodeIdentity::new("node-1".to_string(), NodeRole::Validator);
+
+    assert_eq!(node.node_id, "node-1");
+    assert!(node.is_validator());
 }
