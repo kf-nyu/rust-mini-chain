@@ -1043,3 +1043,37 @@ async fn permissioned_handshake_accepts_trusted_peer() {
 
     server.await.unwrap();
 }
+
+#[tokio::test]
+async fn permissioned_handshake_rejects_untrusted_peer() {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+
+    let untrusted_identity =
+        NodeIdentity::new("unknown-validator".to_string(), NodeRole::Validator);
+
+    let registry = PeerRegistry::new();
+
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+
+        let accepted = async_network::read_permissioned_handshake(&mut stream, &registry)
+            .await
+            .unwrap();
+
+        assert!(!accepted);
+    });
+
+    let mut stream = tokio::net::TcpStream::connect(&address).await.unwrap();
+
+    async_network::write_message(&mut stream, &NetworkMessage::Hello(untrusted_identity))
+        .await
+        .unwrap();
+
+    stream.shutdown().await.unwrap();
+
+    server.await.unwrap();
+}

@@ -156,7 +156,9 @@ pub async fn read_permissioned_handshake(
     let message = read_message(stream).await?;
 
     match message {
-        NetworkMessage::Hello(identity) => Ok(registry.is_trusted(&identity.node_id)),
+        NetworkMessage::Hello(identity) => {
+            Ok(registry.is_trusted(&identity.node_id) && identity.is_validator())
+        }
         _ => Ok(false),
     }
 }
