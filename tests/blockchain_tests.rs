@@ -1,3 +1,4 @@
+use rust_mini_chain::asset::{Asset, AssetType};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
@@ -1076,4 +1077,42 @@ async fn permissioned_handshake_rejects_untrusted_peer() {
     stream.shutdown().await.unwrap();
 
     server.await.unwrap();
+}
+
+#[test]
+fn asset_model_tracks_fungible_asset() {
+    let asset = Asset::new(
+        "asset-1".to_string(),
+        "Digital Dollar".to_string(),
+        "DUSD".to_string(),
+        AssetType::Fungible,
+        1_000_000,
+    );
+
+    assert_eq!(asset.asset_id, "asset-1");
+    assert_eq!(asset.name, "Digital Dollar");
+    assert_eq!(asset.symbol, "DUSD");
+    assert_eq!(asset.total_supply, 1_000_000);
+
+    assert!(asset.is_fungible());
+    assert!(!asset.is_non_fungible());
+}
+
+#[test]
+fn asset_model_tracks_non_fungible_asset() {
+    let asset = Asset::new(
+        "asset-2".to_string(),
+        "Warehouse Receipt".to_string(),
+        "WR-001".to_string(),
+        AssetType::NonFungible,
+        1,
+    );
+
+    assert_eq!(asset.asset_id, "asset-2");
+    assert_eq!(asset.name, "Warehouse Receipt");
+    assert_eq!(asset.symbol, "WR-001");
+    assert_eq!(asset.total_supply, 1);
+
+    assert!(!asset.is_fungible());
+    assert!(asset.is_non_fungible());
 }
