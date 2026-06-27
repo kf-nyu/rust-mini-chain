@@ -7,6 +7,7 @@ use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
 use rust_mini_chain::peer_registry::PeerRegistry;
+use rust_mini_chain::settlement::{SettlementEngine, SettlementInstruction, SettlementStatus};
 use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
@@ -1225,4 +1226,331 @@ fn asset_ledger_applies_asset_issuance() {
     ledger.apply_issuance(&issuance);
 
     assert_eq!(ledger.balance_of("asset-1", "issuer-1"), 1_000_000);
+}
+
+#[test]
+fn settlement_instruction_starts_pending() {
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    assert_eq!(instruction.settlement_id, "settlement-1");
+    assert_eq!(instruction.asset_id, "asset-1");
+    assert_eq!(instruction.from, "wallet-1");
+    assert_eq!(instruction.to, "wallet-2");
+    assert_eq!(instruction.quantity, 100);
+    assert_eq!(instruction.status, SettlementStatus::Pending);
+
+    assert!(instruction.is_pending());
+    assert!(!instruction.is_settled());
+    assert!(!instruction.is_failed());
+}
+
+#[test]
+fn settlement_instruction_can_be_marked_settled() {
+    let mut instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    instruction.mark_settled();
+
+    assert_eq!(instruction.status, SettlementStatus::Settled);
+    assert!(instruction.is_settled());
+    assert!(!instruction.is_pending());
+    assert!(!instruction.is_failed());
+}
+
+#[test]
+fn settlement_instruction_can_be_marked_failed() {
+    let mut instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    instruction.mark_failed();
+
+    assert_eq!(instruction.status, SettlementStatus::Failed);
+    assert!(instruction.is_failed());
+    assert!(!instruction.is_pending());
+    assert!(!instruction.is_settled());
+}
+
+#[test]
+fn settlement_engine_adds_instruction() {
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert_eq!(engine.instruction_count(), 1);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert_eq!(stored.settlement_id, "settlement-1");
+    assert_eq!(stored.asset_id, "asset-1");
+    assert_eq!(stored.from, "wallet-1");
+    assert_eq!(stored.to, "wallet-2");
+    assert_eq!(stored.quantity, 100);
+    assert_eq!(stored.status, SettlementStatus::Pending);
+}
+
+#[test]
+fn settlement_engine_rejects_duplicate_instruction() {
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(instruction.clone()));
+    assert!(!engine.add_instruction(instruction));
+
+    assert_eq!(engine.instruction_count(), 1);
+}
+
+#[test]
+fn settlement_engine_executes_valid_settlement() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 300);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 200);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_settled());
+    assert_eq!(stored.status, SettlementStatus::Settled);
+}
+
+#[test]
+fn settlement_engine_executes_pending_settlements() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+
+    let settled_count = engine.execute_pending(&mut ledger);
+
+    assert_eq!(settled_count, 2);
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 200);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 200);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-3"), 100);
+
+    assert!(engine.get_instruction("settlement-1").unwrap().is_settled());
+
+    assert!(engine.get_instruction("settlement-2").unwrap().is_settled());
+}
+
+#[test]
+fn settlement_engine_counts_instruction_statuses() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 300);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        500,
+    );
+
+    let settlement_3 = SettlementInstruction::new(
+        "settlement-3".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-4".to_string(),
+        50,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+    assert!(engine.add_instruction(settlement_3));
+
+    assert_eq!(engine.pending_count(), 3);
+    assert_eq!(engine.settled_count(), 0);
+    assert_eq!(engine.failed_count(), 0);
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+    assert!(!engine.execute_settlement("settlement-2", &mut ledger));
+
+    assert_eq!(engine.pending_count(), 1);
+    assert_eq!(engine.settled_count(), 1);
+    assert_eq!(engine.failed_count(), 1);
+}
+
+#[test]
+fn settlement_engine_rejects_reexecution_of_settled_instruction() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+    assert!(!engine.execute_settlement("settlement-2", &mut ledger));
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 300);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 200);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_settled());
+}
+
+#[test]
+fn settlement_engine_returns_pending_instructions() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 300);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+
+    let pending = engine.pending_instructions();
+
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].settlement_id, "settlement-2");
+    assert!(pending[0].is_pending());
+}
+
+#[test]
+fn settlement_engine_returns_settled_and_failed_instructions() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 300);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        500,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+    assert!(!engine.execute_settlement("settlement-2", &mut ledger));
+
+    let settled = engine.settled_instructions();
+    let failed = engine.failed_instructions();
+
+    assert_eq!(settled.len(), 1);
+    assert_eq!(failed.len(), 1);
+
+    assert_eq!(settled[0].settlement_id, "settlement-1");
+    assert!(settled[0].is_settled());
+
+    assert_eq!(failed[0].settlement_id, "settlement-2");
+    assert!(failed[0].is_failed());
 }
