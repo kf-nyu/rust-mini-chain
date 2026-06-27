@@ -1358,3 +1358,91 @@ fn settlement_engine_executes_valid_settlement() {
     assert!(stored.is_settled());
     assert_eq!(stored.status, SettlementStatus::Settled);
 }
+
+#[test]
+fn settlement_engine_executes_pending_settlements() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+
+    let settled_count = engine.execute_pending(&mut ledger);
+
+    assert_eq!(settled_count, 2);
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 200);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 200);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-3"), 100);
+
+    assert!(engine.get_instruction("settlement-1").unwrap().is_settled());
+
+    assert!(engine.get_instruction("settlement-2").unwrap().is_settled());
+}
+
+#[test]
+fn settlement_engine_counts_instruction_statuses() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 300);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        500,
+    );
+
+    let settlement_3 = SettlementInstruction::new(
+        "settlement-3".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-4".to_string(),
+        50,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+    assert!(engine.add_instruction(settlement_3));
+
+    assert_eq!(engine.pending_count(), 3);
+    assert_eq!(engine.settled_count(), 0);
+    assert_eq!(engine.failed_count(), 0);
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+    assert!(!engine.execute_settlement("settlement-2", &mut ledger));
+
+    assert_eq!(engine.pending_count(), 1);
+    assert_eq!(engine.settled_count(), 1);
+    assert_eq!(engine.failed_count(), 1);
+}

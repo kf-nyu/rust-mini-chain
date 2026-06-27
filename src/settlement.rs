@@ -113,4 +113,44 @@ impl SettlementEngine {
             false
         }
     }
+
+    pub fn execute_pending(&mut self, ledger: &mut AssetLedger) -> usize {
+        let pending_ids: Vec<String> = self
+            .instructions
+            .iter()
+            .filter(|(_, instruction)| instruction.is_pending())
+            .map(|(settlement_id, _)| settlement_id.clone())
+            .collect();
+
+        let mut settled_count = 0;
+
+        for settlement_id in pending_ids {
+            if self.execute_settlement(&settlement_id, ledger) {
+                settled_count += 1;
+            }
+        }
+
+        settled_count
+    }
+
+    pub fn pending_count(&self) -> usize {
+        self.instructions
+            .values()
+            .filter(|instruction| instruction.is_pending())
+            .count()
+    }
+
+    pub fn settled_count(&self) -> usize {
+        self.instructions
+            .values()
+            .filter(|instruction| instruction.is_settled())
+            .count()
+    }
+
+    pub fn failed_count(&self) -> usize {
+        self.instructions
+            .values()
+            .filter(|instruction| instruction.is_failed())
+            .count()
+    }
 }
