@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SettlementStatus {
@@ -53,5 +54,36 @@ impl SettlementInstruction {
 
     pub fn is_failed(&self) -> bool {
         self.status == SettlementStatus::Failed
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SettlementEngine {
+    instructions: HashMap<String, SettlementInstruction>,
+}
+impl SettlementEngine {
+    pub fn new() -> Self {
+        Self {
+            instructions: HashMap::new(),
+        }
+    }
+
+    pub fn add_instruction(&mut self, instruction: SettlementInstruction) -> bool {
+        if self.instructions.contains_key(&instruction.settlement_id) {
+            return false;
+        }
+
+        self.instructions
+            .insert(instruction.settlement_id.clone(), instruction);
+
+        true
+    }
+
+    pub fn get_instruction(&self, settlement_id: &str) -> Option<&SettlementInstruction> {
+        self.instructions.get(settlement_id)
+    }
+
+    pub fn instruction_count(&self) -> usize {
+        self.instructions.len()
     }
 }

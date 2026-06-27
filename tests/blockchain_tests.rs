@@ -7,7 +7,7 @@ use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
 use rust_mini_chain::peer_registry::PeerRegistry;
-use rust_mini_chain::settlement::{SettlementInstruction, SettlementStatus};
+use rust_mini_chain::settlement::{SettlementEngine, SettlementInstruction, SettlementStatus};
 use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
@@ -1284,4 +1284,48 @@ fn settlement_instruction_can_be_marked_failed() {
     assert!(instruction.is_failed());
     assert!(!instruction.is_pending());
     assert!(!instruction.is_settled());
+}
+
+#[test]
+fn settlement_engine_adds_instruction() {
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert_eq!(engine.instruction_count(), 1);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert_eq!(stored.settlement_id, "settlement-1");
+    assert_eq!(stored.asset_id, "asset-1");
+    assert_eq!(stored.from, "wallet-1");
+    assert_eq!(stored.to, "wallet-2");
+    assert_eq!(stored.quantity, 100);
+    assert_eq!(stored.status, SettlementStatus::Pending);
+}
+
+#[test]
+fn settlement_engine_rejects_duplicate_instruction() {
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(instruction.clone()));
+    assert!(!engine.add_instruction(instruction));
+
+    assert_eq!(engine.instruction_count(), 1);
 }
