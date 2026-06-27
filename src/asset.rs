@@ -133,4 +133,12 @@ impl AssetLedger {
 
         true
     }
+
+    pub fn apply_issuance(&mut self, issuance: &AssetIssuance) {
+        self.credit(
+            &issuance.asset.asset_id,
+            &issuance.issuer,
+            issuance.asset.total_supply,
+        );
+    }
 }

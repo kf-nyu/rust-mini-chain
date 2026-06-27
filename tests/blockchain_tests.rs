@@ -1207,3 +1207,22 @@ fn asset_ledger_rejects_transfer_with_insufficient_balance() {
     assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 100);
     assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 0);
 }
+
+#[test]
+fn asset_ledger_applies_asset_issuance() {
+    let mut ledger = AssetLedger::new();
+
+    let asset = Asset::new(
+        "asset-1".to_string(),
+        "Digital Dollar".to_string(),
+        "DUSD".to_string(),
+        AssetType::Fungible,
+        1_000_000,
+    );
+
+    let issuance = AssetIssuance::new(asset, "issuer-1".to_string());
+
+    ledger.apply_issuance(&issuance);
+
+    assert_eq!(ledger.balance_of("asset-1", "issuer-1"), 1_000_000);
+}
