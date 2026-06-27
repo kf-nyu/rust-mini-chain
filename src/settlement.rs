@@ -160,4 +160,17 @@ impl SettlementEngine {
             .filter(|instruction| instruction.is_pending())
             .collect()
     }
+
+    pub fn settled_instructions(&self) -> Vec<&SettlementInstruction> {
+        self.instructions
+            .values()
+            .filter(|instruction| instruction.is_settled())
+            .collect()
+    }
+    pub fn failed_instructions(&self) -> Vec<&SettlementInstruction> {
+        self.instructions
+            .values()
+            .filter(|instruction| instruction.is_failed())
+            .collect()
+    }
 }

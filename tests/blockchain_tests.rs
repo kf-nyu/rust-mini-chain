@@ -1511,3 +1511,46 @@ fn settlement_engine_returns_pending_instructions() {
     assert_eq!(pending[0].settlement_id, "settlement-2");
     assert!(pending[0].is_pending());
 }
+
+#[test]
+fn settlement_engine_returns_settled_and_failed_instructions() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 300);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        500,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+    assert!(!engine.execute_settlement("settlement-2", &mut ledger));
+
+    let settled = engine.settled_instructions();
+    let failed = engine.failed_instructions();
+
+    assert_eq!(settled.len(), 1);
+    assert_eq!(failed.len(), 1);
+
+    assert_eq!(settled[0].settlement_id, "settlement-1");
+    assert!(settled[0].is_settled());
+
+    assert_eq!(failed[0].settlement_id, "settlement-2");
+    assert!(failed[0].is_failed());
+}
