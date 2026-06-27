@@ -5,6 +5,7 @@ use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
 use rust_mini_chain::peer_registry::PeerRegistry;
+use rust_mini_chain::settlement::{SettlementEngine, SettlementInstruction};
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_output::TxOutput;
 use rust_mini_chain::wallet::Wallet;
@@ -305,6 +306,72 @@ async fn main() {
         );
 
         println!("Asset tokenization demo complete");
+
+        return;
+    }
+
+    // Demonstrates settlement instruction processing against the asset ledger.
+    // One settlement succeeds, while another fails due to insufficient balance.
+    if args.len() >= 2 && args[1] == "settlement-demo" {
+        println!("Settlement engine demo");
+
+        let asset = Asset::new(
+            "asset-1".to_string(),
+            "Digital Dallar".to_string(),
+            "DUSD".to_string(),
+            AssetType::Fungible,
+            1_000_000,
+        );
+
+        let issuance = AssetIssuance::new(asset.clone(), "issuer-1".to_string());
+
+        let mut ledger = AssetLedger::new();
+
+        ledger.apply_issuance(&issuance);
+
+        let mut engine = SettlementEngine::new();
+
+        let settlement_1 = SettlementInstruction::new(
+            "settlement-1".to_string(),
+            asset.asset_id.clone(),
+            "issuer-1".to_string(),
+            "wallet-1".to_string(),
+            250_000,
+        );
+
+        let settlement_2 = SettlementInstruction::new(
+            "settlement-2".to_string(),
+            asset.asset_id.clone(),
+            "wallet-1".to_string(),
+            "wallet-2".to_string(),
+            500_000,
+        );
+
+        engine.add_instruction(settlement_1);
+        engine.add_instruction(settlement_2);
+
+        let settled_count = engine.execute_pending(&mut ledger);
+
+        println!("Settled instructions: {settled_count}");
+        println!("Pending instructions: {}", engine.pending_count());
+        println!("Failed instructions: {}", engine.failed_count());
+
+        println!(
+            "Issuer balance: {}",
+            ledger.balance_of(&asset.asset_id, "issuer-1")
+        );
+
+        println!(
+            "Wallet-1 balance: {}",
+            ledger.balance_of(&asset.asset_id, "wallet-1")
+        );
+
+        println!(
+            "Wallet-2 balance: {}",
+            ledger.balance_of(&asset.asset_id, "wallet-2")
+        );
+
+        println!("Settlement engine demo complete");
 
         return;
     }
