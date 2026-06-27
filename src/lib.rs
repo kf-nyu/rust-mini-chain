@@ -1,3 +1,5 @@
+/// Difines enterprise digital assets for tokenization on the ledger.
+pub mod asset;
 /// Tokio-based asynchronous networking helpers.
 pub mod async_network;
 /// Proof-of-work block type and block-level validation.

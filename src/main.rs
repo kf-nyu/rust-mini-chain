@@ -1,3 +1,4 @@
+use rust_mini_chain::asset::{Asset, AssetIssuance, AssetLedger, AssetTransfer, AssetType};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
@@ -254,6 +255,56 @@ async fn main() {
         );
 
         println!("Permissoned demo complete");
+
+        return;
+    }
+
+    // Demonstrates issuing a fungible aset and recording the initial supply
+    // in the ledger before transferring a protion to another owner.
+    if args.len() >= 2 && args[1] == "asset-demo" {
+        println!("Asset tokenization demo");
+
+        let asset = Asset::new(
+            "asset-1".to_string(),
+            "Digital Dallar".to_string(),
+            "DUSD".to_string(),
+            AssetType::Fungible,
+            1_000_000,
+        );
+
+        let issuance = AssetIssuance::new(asset.clone(), "issuer-1".to_string());
+
+        let mut ledger = AssetLedger::new();
+
+        ledger.apply_issuance(&issuance);
+
+        println!(
+            "Issued {} {} to {}",
+            asset.total_supply, asset.symbol, issuance.issuer
+        );
+
+        let transfer = AssetTransfer::new(
+            asset.asset_id.clone(),
+            "issuer-1".to_string(),
+            "wallet-1".to_string(),
+            250_000,
+        );
+
+        let transfer_accepted = ledger.apply_transfer(&transfer);
+
+        println!("Transfer accepted: {transfer_accepted}");
+
+        println!(
+            "Issuer balance: {}",
+            ledger.balance_of(&asset.asset_id, "issuer-1")
+        );
+
+        println!(
+            "Wallet-1 balance: {}",
+            ledger.balance_of(&asset.asset_id, "wallet-1")
+        );
+
+        println!("Asset tokenization demo complete");
 
         return;
     }

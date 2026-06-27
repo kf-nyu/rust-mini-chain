@@ -1,3 +1,6 @@
+use rust_mini_chain::asset::{
+    Asset, AssetIssuance, AssetLedger, AssetOwnership, AssetTransfer, AssetType,
+};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
@@ -1076,4 +1079,150 @@ async fn permissioned_handshake_rejects_untrusted_peer() {
     stream.shutdown().await.unwrap();
 
     server.await.unwrap();
+}
+
+#[test]
+fn asset_model_tracks_fungible_asset() {
+    let asset = Asset::new(
+        "asset-1".to_string(),
+        "Digital Dollar".to_string(),
+        "DUSD".to_string(),
+        AssetType::Fungible,
+        1_000_000,
+    );
+
+    assert_eq!(asset.asset_id, "asset-1");
+    assert_eq!(asset.name, "Digital Dollar");
+    assert_eq!(asset.symbol, "DUSD");
+    assert_eq!(asset.total_supply, 1_000_000);
+
+    assert!(asset.is_fungible());
+    assert!(!asset.is_non_fungible());
+}
+
+#[test]
+fn asset_model_tracks_non_fungible_asset() {
+    let asset = Asset::new(
+        "asset-2".to_string(),
+        "Warehouse Receipt".to_string(),
+        "WR-001".to_string(),
+        AssetType::NonFungible,
+        1,
+    );
+
+    assert_eq!(asset.asset_id, "asset-2");
+    assert_eq!(asset.name, "Warehouse Receipt");
+    assert_eq!(asset.symbol, "WR-001");
+    assert_eq!(asset.total_supply, 1);
+
+    assert!(!asset.is_fungible());
+    assert!(asset.is_non_fungible());
+}
+
+#[test]
+fn asset_issuance_tracks_asset_and_issuer() {
+    let asset = Asset::new(
+        "asset-1".to_string(),
+        "Digital Dollar".to_string(),
+        "DUSD".to_string(),
+        AssetType::Fungible,
+        1_000_000,
+    );
+
+    let issuance = AssetIssuance::new(asset.clone(), "issuer-1".to_string());
+
+    assert_eq!(issuance.asset, asset);
+    assert_eq!(issuance.issuer, "issuer-1");
+}
+
+#[test]
+fn asset_ownership_tracks_owner_and_quantity() {
+    let ownership = AssetOwnership::new("asset-1".to_string(), "wallet-1".to_string(), 500);
+
+    assert_eq!(ownership.asset_id, "asset-1");
+    assert_eq!(ownership.owner, "wallet-1");
+    assert_eq!(ownership.quantity, 500);
+}
+
+#[test]
+fn asset_transfer_tracks_sender_receiver_and_quantity() {
+    let transfer = AssetTransfer::new(
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        250,
+    );
+
+    assert_eq!(transfer.asset_id, "asset-1");
+    assert_eq!(transfer.from, "wallet-1");
+    assert_eq!(transfer.to, "wallet-2");
+    assert_eq!(transfer.quantity, 250);
+}
+
+#[test]
+fn asset_ledger_credits_owner_balance() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+    ledger.credit("asset-1", "wallet-1", 250);
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 750);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 0);
+}
+
+#[test]
+fn asset_ledger_applies_valid_transfer() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+
+    let transfer = AssetTransfer::new(
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    assert!(ledger.apply_transfer(&transfer));
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 300);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 200);
+}
+
+#[test]
+fn asset_ledger_rejects_transfer_with_insufficient_balance() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 100);
+
+    let transfer = AssetTransfer::new(
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    assert!(!ledger.apply_transfer(&transfer));
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 100);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 0);
+}
+
+#[test]
+fn asset_ledger_applies_asset_issuance() {
+    let mut ledger = AssetLedger::new();
+
+    let asset = Asset::new(
+        "asset-1".to_string(),
+        "Digital Dollar".to_string(),
+        "DUSD".to_string(),
+        AssetType::Fungible,
+        1_000_000,
+    );
+
+    let issuance = AssetIssuance::new(asset, "issuer-1".to_string());
+
+    ledger.apply_issuance(&issuance);
+
+    assert_eq!(ledger.balance_of("asset-1", "issuer-1"), 1_000_000);
 }
