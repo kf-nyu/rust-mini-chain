@@ -1,3 +1,4 @@
+use crate::asset::{AssetLedger, AssetTransfer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -85,5 +86,31 @@ impl SettlementEngine {
 
     pub fn instruction_count(&self) -> usize {
         self.instructions.len()
+    }
+
+    pub fn execute_settlement(&mut self, settlement_id: &str, ledger: &mut AssetLedger) -> bool {
+        let instruction = match self.instructions.get_mut(settlement_id) {
+            Some(instruction) => instruction,
+            None => return false,
+        };
+
+        if !instruction.is_pending() {
+            return false;
+        }
+
+        let transfer = AssetTransfer::new(
+            instruction.asset_id.clone(),
+            instruction.from.clone(),
+            instruction.to.clone(),
+            instruction.quantity,
+        );
+
+        if ledger.apply_transfer(&transfer) {
+            instruction.mark_settled();
+            true
+        } else {
+            instruction.mark_failed();
+            false
+        }
     }
 }

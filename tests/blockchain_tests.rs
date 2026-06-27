@@ -1329,3 +1329,32 @@ fn settlement_engine_rejects_duplicate_instruction() {
 
     assert_eq!(engine.instruction_count(), 1);
 }
+
+#[test]
+fn settlement_engine_executes_valid_settlement() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 300);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 200);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_settled());
+    assert_eq!(stored.status, SettlementStatus::Settled);
+}
