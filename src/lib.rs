@@ -18,6 +18,8 @@ pub mod network_message;
 pub mod node_identity;
 /// trusted peer registry
 pub mod peer_registry;
+/// Defines settlement instructions and settlement lifecycle state.
+pub mod settlement;
 /// File-based blockchain persistence helper.
 pub mod storage;
 /// UTXO-style transaction creation, signing, and verification.

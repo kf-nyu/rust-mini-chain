@@ -7,6 +7,7 @@ use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
 use rust_mini_chain::peer_registry::PeerRegistry;
+use rust_mini_chain::settlement::{SettlementInstruction, SettlementStatus};
 use rust_mini_chain::storage::Storage;
 use rust_mini_chain::transaction::Transaction;
 use rust_mini_chain::tx_input::TxInput;
@@ -1225,4 +1226,62 @@ fn asset_ledger_applies_asset_issuance() {
     ledger.apply_issuance(&issuance);
 
     assert_eq!(ledger.balance_of("asset-1", "issuer-1"), 1_000_000);
+}
+
+#[test]
+fn settlement_instruction_starts_pending() {
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    assert_eq!(instruction.settlement_id, "settlement-1");
+    assert_eq!(instruction.asset_id, "asset-1");
+    assert_eq!(instruction.from, "wallet-1");
+    assert_eq!(instruction.to, "wallet-2");
+    assert_eq!(instruction.quantity, 100);
+    assert_eq!(instruction.status, SettlementStatus::Pending);
+
+    assert!(instruction.is_pending());
+    assert!(!instruction.is_settled());
+    assert!(!instruction.is_failed());
+}
+
+#[test]
+fn settlement_instruction_can_be_marked_settled() {
+    let mut instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    instruction.mark_settled();
+
+    assert_eq!(instruction.status, SettlementStatus::Settled);
+    assert!(instruction.is_settled());
+    assert!(!instruction.is_pending());
+    assert!(!instruction.is_failed());
+}
+
+#[test]
+fn settlement_instruction_can_be_marked_failed() {
+    let mut instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    instruction.mark_failed();
+
+    assert_eq!(instruction.status, SettlementStatus::Failed);
+    assert!(instruction.is_failed());
+    assert!(!instruction.is_pending());
+    assert!(!instruction.is_settled());
 }
