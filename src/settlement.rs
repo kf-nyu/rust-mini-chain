@@ -153,4 +153,11 @@ impl SettlementEngine {
             .filter(|instruction| instruction.is_failed())
             .count()
     }
+
+    pub fn pending_instructions(&self) -> Vec<&SettlementInstruction> {
+        self.instructions
+            .values()
+            .filter(|instruction| instruction.is_pending())
+            .collect()
+    }
 }

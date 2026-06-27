@@ -1475,3 +1475,39 @@ fn settlement_engine_rejects_reexecution_of_settled_instruction() {
 
     assert!(stored.is_settled());
 }
+
+#[test]
+fn settlement_engine_returns_pending_instructions() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 300);
+
+    let mut engine = SettlementEngine::new();
+
+    let settlement_1 = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        100,
+    );
+
+    let settlement_2 = SettlementInstruction::new(
+        "settlement-2".to_string(),
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-3".to_string(),
+        100,
+    );
+
+    assert!(engine.add_instruction(settlement_1));
+    assert!(engine.add_instruction(settlement_2));
+
+    assert!(engine.execute_settlement("settlement-1", &mut ledger));
+
+    let pending = engine.pending_instructions();
+
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].settlement_id, "settlement-2");
+    assert!(pending[0].is_pending());
+}
