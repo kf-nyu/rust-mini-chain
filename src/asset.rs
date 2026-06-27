@@ -92,13 +92,13 @@ impl AssetTransfer {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AssetLedger {
-    pub balance: HashMap<String, u64>,
+    pub balances: HashMap<String, u64>,
 }
 
 impl AssetLedger {
     pub fn new() -> Self {
         Self {
-            balance: HashMap::new(),
+            balances: HashMap::new(),
         }
     }
 
@@ -108,12 +108,29 @@ impl AssetLedger {
 
     pub fn credit(&mut self, asset_id: &str, owner: &str, quantity: u64) {
         let key = Self::balance_key(asset_id, owner);
-        let balance = self.balance.entry(key).or_insert(0);
+        let balance = self.balances.entry(key).or_insert(0);
         *balance += quantity;
     }
 
     pub fn balance_of(&self, asset_id: &str, owner: &str) -> u64 {
         let key = Self::balance_key(asset_id, owner);
-        *self.balance.get(&key).unwrap_or(&0)
+        *self.balances.get(&key).unwrap_or(&0)
+    }
+
+    pub fn apply_transfer(&mut self, transfer: &AssetTransfer) -> bool {
+        let sender_balance = self.balance_of(&transfer.asset_id, &transfer.from);
+
+        if sender_balance < transfer.quantity {
+            return false;
+        }
+
+        let sender_key = Self::balance_key(&transfer.asset_id, &transfer.from);
+
+        let receiver_key = Self::balance_key(&transfer.asset_id, &transfer.to);
+
+        *self.balances.entry(sender_key).or_insert(0) -= transfer.quantity;
+        *self.balances.entry(receiver_key).or_insert(0) += transfer.quantity;
+
+        true
     }
 }
