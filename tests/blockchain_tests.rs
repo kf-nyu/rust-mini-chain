@@ -1171,7 +1171,7 @@ fn asset_ledger_credits_owner_balance() {
 }
 
 #[test]
-fn asset_ledger_applies_valide_transfer() {
+fn asset_ledger_applies_valid_transfer() {
     let mut ledger = AssetLedger::new();
 
     ledger.credit("asset-1", "wallet-1", 500);
@@ -1187,4 +1187,23 @@ fn asset_ledger_applies_valide_transfer() {
 
     assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 300);
     assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 200);
+}
+
+#[test]
+fn asset_ledger_rejects_transfer_with_insufficient_balance() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 100);
+
+    let transfer = AssetTransfer::new(
+        "asset-1".to_string(),
+        "wallet-1".to_string(),
+        "wallet-2".to_string(),
+        200,
+    );
+
+    assert!(!ledger.apply_transfer(&transfer));
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 100);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 0);
 }
