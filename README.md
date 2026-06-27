@@ -1,19 +1,19 @@
 # Digital Asset Ledger
 
 ![Rust](https://img.shields.io/badge/Rust-1.88+-orange)
-![Version](https://img.shields.io/badge/version-v8.0.0-success)
+![Version](https://img.shields.io/badge/version-v9.0.0-success)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Tests](https://img.shields.io/badge/tests-46%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-57%20passing-brightgreen)
 
-*A Rust-based research and engineering prototype for blockchain infrastructure, distributed systems, and enterprise DLT architecture.*
+*A Rust-based research and engineering prototype for blockchain infrastructure, distributed systems, and enterprise digital asset architecture.*
 
 ## Overview
 
-Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, and blockchain validation.
+Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, settlement processing, and blockchain validation.
 
 The system is designed as an incremental prototype platform: each release introduces a focused capability while preserving clarity around architecture, validation rules, and engineering trade-offs. This approach supports both technical depth and extensibility as the project evolves.
 
-Beyond public-blockchain mechanics, the roadmap extends toward enterprise Digital Asset and Distributed Ledger Technology (DLT) use cases, including permissioned networks, asset tokenization, settlement workflows, custody controls, and compliance-oriented infrastructure.
+Beyond public-blockchain mechanics, the roadmap extends toward enterprise digital asset and distributed ledger (DLT) use cases, including permissioned networks, asset tokenization, settlement processing, custody controls, and compliance-oriented infrastructure.
 
 Rust was selected for its memory safety, strong type system, concurrency model, and systems-level performance, all of which are well aligned with security-sensitive distributed systems and digital asset infrastructure.
 
@@ -43,22 +43,23 @@ cargo run -- request 127.0.0.1:6000
 cargo run -- async-demo 127.0.0.1:7000
 ```
 
-### Enterprise DLT
+### Enterprise Digital Assets
 
 ```bash
 cargo run -- permissioned-demo
 cargo run -- asset-demo
+cargo run -- settlement-demo
 ```
 
 ## Project Metrics
 
-Current release: `v8.0.0`
+Current release: `v9.0.0`
 
 The project is developed incrementally, with each release introducing a production-inspired capability while maintaining full test coverage and backward compatibility.
 
 - ~2,500+ lines of Rust
-- 16 Rust modules
-- 46 integration tests
+- 17 Rust modules
+- 57 integration tests
 - 9 CLI demonstrations
 - Modular architecture
 
@@ -144,17 +145,29 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Insufficient-balance transfer rejection
 - [x] Asset tokenization CLI demo
 
+### Settlement Engine
+
+- [x] Settlement instruction model
+- [x] Pending, settled, and failed settlement states
+- [x] In-memory settlement engine
+- [x] Duplicate settlement rejection
+- [x] Settlement execution against asset ledger
+- [x] Pending settlement batch execution
+- [x] Settlement status counts
+- [x] Pending, settled, and failed settlement queries
+- [x] Settlement CLI demo
+
 ### Software Engineering
 
 - [x] Modular Rust project structure
 - [x] Unit and integration tests
 - [x] Rustdoc documentation
 
-### Enterprise DLT Roadmap
+### Enterprise Digital Assets Roadmap
 
 - [x] Permissioned network
 - [x] Asset tokenization
-- [ ] Settlement engine
+- [x] Settlement engine
 - [ ] Custody controls
 - [ ] Policy engine
 - [ ] Compliance layer
@@ -173,51 +186,51 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 ### System Architecture
 
 ```text
-                        +------------------+
-                        |      Wallet      |
-                        +------------------+
-                                 |
+                        ┌──────────────────┐
+                        │      Wallet      │
+                        └──────────────────┘
+                                 │ 
                            signs transactions
-                                 |
-                                 v
-                     +-----------------------+
-                     |   Transaction (UTXO)  |
-                     +-----------------------+
-                                 |
-                                 v
-                     +-----------------------+
-                     |       Mempool         |
-                     +-----------------------+
-                                 |
-                                 v
-                     +-----------------------+
-                     |        Mining         |
-                     +-----------------------+
-                                 |
-                                 v
-                     +-----------------------+
-                     |      Blockchain       |
-                     +-----------------------+
-                           |           |
-             Persistence   |           | Networking
-                           v           v
-                     +----------+  +------------------+
-                     | Storage  |  | Permissioned P2P |
-                     +----------+  +------------------+
-                                         |
-                                         v
-                              +----------------------+
-                              |     Asset Layer      |
-                              +----------------------+
-                              | - Tokenization       |
-                              | - Settlement         |
-                              | - Custody            |
-                              | - Policy             |
-                              | - Compliance         |
-                              +----------------------+
+                                 │ 
+                                 ▼
+                     ┌───────────────────────┐
+                     │   Transaction (UTXO)  │
+                     └───────────────────────┘
+                                 │ 
+                                 ▼
+                     ┌───────────────────────┐
+                     │       Mempool         │
+                     └───────────────────────┘
+                                 │ 
+                                 ▼
+                     ┌───────────────────────┐
+                     │        Mining         │
+                     └───────────────────────┘
+                                 │ 
+                                 ▼
+                     ┌───────────────────────┐
+                     │      Blockchain       │
+                     └───────────────────────┘
+                           │            │ 
+             Persistence   │            │  Networking
+                           ▼            ▼
+                     ┌──────────┐  ┌──────────────────┐
+                     │ Storage  │  │ Permissioned P2P │
+                     └──────────┘  └──────────────────┘
+                                        │ 
+                                        ▼
+                              ┌──────────────────────┐
+                              │     Asset Layer      │
+                              ├──────────────────────┤
+                              │ - Tokenization       │
+                              │ - Settlement         │
+                              │ - Custody            │
+                              │ - Policy             │
+                              │ - Compliance         │
+                              └──────────────────────┘
 ```
 
-Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, and transfers.
+Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, transfers, and settlement execution.
 
 ### Block Structure
 
@@ -237,13 +250,13 @@ Block
 ```text
 Transactions in a block
 
-Tx1          Tx2          Tx3          Tx4
- │            │            │            │
-H(Tx1)      H(Tx2)      H(Tx3)      H(Tx4)
-   └──── H12 ────┘        └──── H34 ────┘
-             └────── Merkle Root ──────┘
+  Tx1           Tx2           Tx3           Tx4
+   │             │             │             │
+ H(Tx1)        H(Tx2)        H(Tx3)        H(Tx4)
+   └──── H12 ────┘             └──── H34 ────┘
+          └─────── Merkle Root ───────┘
                          │
-                    stored in block
+                  stored in block
 ```
 
 Each block hashes its transactions into a Merkle root before mining. The root is stored on the block and included in the block hash, so transaction changes are detected during block and chain validation.
@@ -300,8 +313,8 @@ v6.0 ✓ Tokio Async Networking
         ├─────────────────────┐
         │                     │
         ▼                     ▼
-
-Enterprise DLT Track    Public Blockchain Track
+Enterprise Digital    Public Blockchain Track
+  Assets Track 
 
 v7A ✓ Permissioned      v7B Difficulty
     Network                 Adjustment
@@ -310,7 +323,7 @@ v8A ✓ Asset             v8B Rewards
     Tokenization &          & Fees
     Ledger
 
-v9A Settlement          v9B Fork
+v9A ✓ Settlement        v9B Fork
     Engine                  Handling
 
 v10A Custody            v10B Smart
@@ -341,13 +354,13 @@ June    ✓ v1.0 Blockchain Fundamentals
         ✓ v5.0 Transaction Mempool
         ✓ v6.0 Tokio Async Networking
             ↓
-        Track A: Enterprise DLT (Primary)
+        Track A: Enterprise Digital Assets (Primary)
         ─────────────────────────────────
         ✓ v7A Permissioned Network
             ↓
         ✓ v8A Asset Tokenization & Ledger
             ↓
-        v9A Settlement Engine
+        ✓ v9A Settlement Engine
             ↓
 July    v10A Custody Controls
             ↓
@@ -376,7 +389,6 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No settlement workflows yet
 - No custody or compliance layers yet
 - No policy engine yet
 - No smart contracts or advanced consensus features yet
@@ -398,7 +410,7 @@ Run the full test suite with:
 cargo test
 ```
 
-Current test suite includes 46 integration tests covering:
+Current test suite includes 57 integration tests covering:
 
 ### Blockchain Validation
 
@@ -471,11 +483,24 @@ Current test suite includes 46 integration tests covering:
 - Insufficient-balance transfer rejection
 - Issuance-to-ledger application
 
+### Settlement Engine
+
+- Settlement instruction creation
+- Settlement status transitions
+- Duplicate settlement rejection
+- Valid settlement execution
+- Pending settlement batch execution
+- Settlement re-execution rejection
+- Settlement status counts
+- Pending, settled, and failed settlement queries
+- Settlement engine CLI demonstration
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
 - `src/blockchain.rs` - blockchain container and chain-wide validation
 - `src/asset.rs` - asset tokenization models, issuance, ownership, transfers, and balance ledger
+- `src/settlement.rs` - settlement instruction model, settlement lifecycle state, and settlement engine
 - `src/merkle.rs` - Merkle hashing helpers
 - `src/network_message.rs` - protocol messages exchanged between peers
 - `src/node_identity.rs` - permissioned node identity and network roles
@@ -489,7 +514,7 @@ Current test suite includes 46 integration tests covering:
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
 - `src/mempool.rs` - in-memory pending transaction pool
-- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, and asset tokenization behavior
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, asset tokenization, and settlement behavior
 
 ## Technologies
 
@@ -540,6 +565,10 @@ The current implementation includes:
 - Asset issuance and ownership tracking
 - Asset balance ledger
 - Asset transfer processing
+- Settlement instruction model
+- Settlement lifecycle state
+- Settlement execution against the asset ledger
+- Settlement status queries
 - Peer chain synchronization
 - Longest-chain replacement
 - JSON-based blockchain persistence
@@ -550,7 +579,7 @@ The implementation prioritizes readability, correctness, modularity, and increme
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will extend the permissioned networking and asset tokenization foundation with enterprise DLT capabilities, including custody controls, settlement workflows, and policy-driven authorization.
+Future releases will extend the permissioned networking, asset tokenization, and settlement foundation with enterprise digital asset capabilities, including custody controls and policy-driven authorization.
 
 ## References
 
