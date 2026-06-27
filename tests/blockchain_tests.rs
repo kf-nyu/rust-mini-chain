@@ -1,4 +1,6 @@
-use rust_mini_chain::asset::{Asset, AssetIssuance, AssetOwnership, AssetTransfer, AssetType};
+use rust_mini_chain::asset::{
+    Asset, AssetIssuance, AssetLedger, AssetOwnership, AssetTransfer, AssetType,
+};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
 use rust_mini_chain::mempool::Mempool;
@@ -1155,4 +1157,15 @@ fn asset_transfer_tracks_sender_receiver_and_quantity() {
     assert_eq!(transfer.from, "wallet-1");
     assert_eq!(transfer.to, "wallet-2");
     assert_eq!(transfer.quantity, 250);
+}
+
+#[test]
+fn asset_ledger_credits_owner_balance() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "wallet-1", 500);
+    ledger.credit("asset-1", "wallet-1", 250);
+
+    assert_eq!(ledger.balance_of("asset-1", "wallet-1"), 750);
+    assert_eq!(ledger.balance_of("asset-1", "wallet-2"), 0);
 }

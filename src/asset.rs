@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AssetType {
@@ -86,5 +87,33 @@ impl AssetTransfer {
             to,
             quantity,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AssetLedger {
+    pub balance: HashMap<String, u64>,
+}
+
+impl AssetLedger {
+    pub fn new() -> Self {
+        Self {
+            balance: HashMap::new(),
+        }
+    }
+
+    fn balance_key(asset_id: &str, owner: &str) -> String {
+        format!("{asset_id}:{owner}")
+    }
+
+    pub fn credit(&mut self, asset_id: &str, owner: &str, quantity: u64) {
+        let key = Self::balance_key(asset_id, owner);
+        let balance = self.balance.entry(key).or_insert(0);
+        *balance += quantity;
+    }
+
+    pub fn balance_of(&self, asset_id: &str, owner: &str) -> u64 {
+        let key = Self::balance_key(asset_id, owner);
+        *self.balance.get(&key).unwrap_or(&0)
     }
 }
