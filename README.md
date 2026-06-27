@@ -1,10 +1,15 @@
 # Digital Asset Ledger
 
+![Rust](https://img.shields.io/badge/Rust-1.88+-orange)
+![Version](https://img.shields.io/badge/version-v8.0.0-success)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Tests](https://img.shields.io/badge/tests-46%20passing-brightgreen)
+
 *A Rust-based research and engineering prototype for blockchain infrastructure, distributed systems, and enterprise DLT architecture.*
 
 ## Overview
 
-Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, and blockchain validation.
+Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, and blockchain validation.
 
 The system is designed as an incremental prototype platform: each release introduces a focused capability while preserving clarity around architecture, validation rules, and engineering trade-offs. This approach supports both technical depth and extensibility as the project evolves.
 
@@ -12,67 +17,52 @@ Beyond public-blockchain mechanics, the roadmap extends toward enterprise Digita
 
 Rust was selected for its memory safety, strong type system, concurrency model, and systems-level performance, all of which are well aligned with security-sensitive distributed systems and digital asset infrastructure.
 
+## Project Philosophy
+
+This project is intentionally developed as an incremental engineering exercise. Each release introduces a focused capability while preserving code quality, testing, and documentation.
+
+Rather than implementing a complete blockchain at once, each version builds on previous functionality to demonstrate architectural evolution, systems programming techniques, and enterprise distributed ledger design.
+
 ## Quick Start
 
-### Run the local demo
+### Core
 
 ```bash
 cargo run --release
-```
-
-### Run tests
-
-```bash
 cargo test
-```
-
-### Generate Rust documentation
-
-```bash
 cargo doc --open
-```
-
-### Start a node
-
-```bash
-cargo run -- node 6000
-```
-
-### Send a sample block to a node
-
-```bash
-cargo run -- send 127.0.0.1:6000
-```
-
-### Send a chain synchronization request
-
-```bash
-cargo run -- request 127.0.0.1:6000
-```
-
-### Run the mempool lifecycle demo
-
-```bash
 cargo run -- mempool-demo
 ```
 
-### Run the Tokio CLI demo
-
-Run a complete async networking demo:
+### Networking
 
 ```bash
+cargo run -- node 6000
+cargo run -- send 127.0.0.1:6000
+cargo run -- request 127.0.0.1:6000
 cargo run -- async-demo 127.0.0.1:7000
 ```
 
-### Run the permissioned network demo
+### Enterprise DLT
 
 ```bash
 cargo run -- permissioned-demo
+cargo run -- asset-demo
 ```
 
-## Current Features
+## Project Metrics
 
-Current release: `v7.0.0`
+Current release: `v8.0.0`
+
+The project is developed incrementally, with each release introducing a production-inspired capability while maintaining full test coverage and backward compatibility.
+
+- ~2,500+ lines of Rust
+- 16 Rust modules
+- 46 integration tests
+- 9 CLI demonstrations
+- Modular architecture
+
+## Implemented Features
 
 ### Blockchain Core
 
@@ -142,22 +132,35 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Trusted peer acceptance
 - [x] Untrusted peer rejection
 
-### Engineering
+### Asset Tokenization
+
+- [x] Fungible and non-fungible asset model
+- [x] Asset issuance model
+- [x] Asset ownership record
+- [x] Asset transfer model
+- [x] In-memory asset balance ledger
+- [x] Asset issuance applied to ledger
+- [x] Valid asset transfer processing
+- [x] Insufficient-balance transfer rejection
+- [x] Asset tokenization CLI demo
+
+### Software Engineering
 
 - [x] Modular Rust project structure
 - [x] Unit and integration tests
 - [x] Rustdoc documentation
 
-### Future Track A: Enterprise DLT
+### Enterprise DLT Roadmap
 
 - [x] Permissioned network
-- [ ] Asset tokenization
+- [x] Asset tokenization
 - [ ] Settlement engine
 - [ ] Custody controls
+- [ ] Policy engine
 - [ ] Compliance layer
 - [ ] Audit & reporting
 
-### Future Track B: Public Blockchain
+### Public Blockchain Roadmap
 
 - [ ] Difficulty adjustment
 - [ ] Mining rewards and fees
@@ -167,19 +170,54 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 
 ## Architecture
 
-### High-Level Flow
+### System Architecture
 
 ```text
-Wallet
-  ↓ signs
-Transaction
-  ↓ included in
-Block
-  ↓ linked by previous_hash
-Blockchain
+                        +------------------+
+                        |      Wallet      |
+                        +------------------+
+                                 |
+                           signs transactions
+                                 |
+                                 v
+                     +-----------------------+
+                     |   Transaction (UTXO)  |
+                     +-----------------------+
+                                 |
+                                 v
+                     +-----------------------+
+                     |       Mempool         |
+                     +-----------------------+
+                                 |
+                                 v
+                     +-----------------------+
+                     |        Mining         |
+                     +-----------------------+
+                                 |
+                                 v
+                     +-----------------------+
+                     |      Blockchain       |
+                     +-----------------------+
+                           |           |
+             Persistence   |           | Networking
+                           v           v
+                     +----------+  +------------------+
+                     | Storage  |  | Permissioned P2P |
+                     +----------+  +------------------+
+                                         |
+                                         v
+                              +----------------------+
+                              |     Asset Layer      |
+                              +----------------------+
+                              | - Tokenization       |
+                              | - Settlement         |
+                              | - Custody            |
+                              | - Policy             |
+                              | - Compliance         |
+                              +----------------------+
 ```
 
-Wallets create Ed25519 keypairs, transactions spend prior outputs into new outputs, blocks package transactions with a Merkle root, and the blockchain links blocks through hashes and proof of work.
+Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, and transfers.
 
 ### Block Structure
 
@@ -197,16 +235,18 @@ Block
 ### Merkle Tree
 
 ```text
-           Merkle Root
-                │
-        ┌───────┴───────┐
-        │               │
-      H12             H34
-      │ │             │ │
-      H1 H2           H3 H4
+Transactions in a block
+
+Tx1          Tx2          Tx3          Tx4
+ │            │            │            │
+H(Tx1)      H(Tx2)      H(Tx3)      H(Tx4)
+   └──── H12 ────┘        └──── H34 ────┘
+             └────── Merkle Root ──────┘
+                         │
+                    stored in block
 ```
 
-Transactions are hashed and combined recursively until a single Merkle root remains. That root is stored in the block header and contributes to the block hash.
+Each block hashes its transactions into a Merkle root before mining. The root is stored on the block and included in the block hash, so transaction changes are detected during block and chain validation.
 
 ## Validation Model
 
@@ -261,14 +301,14 @@ v6.0 ✓ Tokio Async Networking
         │                     │
         ▼                     ▼
 
-Track A                 Track B
-Enterprise DLT          Public Blockchain
+Enterprise DLT Track    Public Blockchain Track
 
 v7A ✓ Permissioned      v7B Difficulty
     Network                 Adjustment
 
-v8A Asset               v8B Rewards
-    Tokenization            & Fees
+v8A ✓ Asset             v8B Rewards
+    Tokenization &          & Fees
+    Ledger
 
 v9A Settlement          v9B Fork
     Engine                  Handling
@@ -276,10 +316,13 @@ v9A Settlement          v9B Fork
 v10A Custody            v10B Smart
      Controls               Contracts
 
-v11A Compliance         v11B Light
-     Layer                  Clients
+v11A Policy             v11B Light
+     Engine                 Clients
 
-v12A Audit &
+v12A Compliance
+     Layer
+
+v13A Audit &
      Reporting
 ```
 
@@ -302,15 +345,17 @@ June    ✓ v1.0 Blockchain Fundamentals
         ─────────────────────────────────
         ✓ v7A Permissioned Network
             ↓
-        v8A Asset Tokenization
+        ✓ v8A Asset Tokenization & Ledger
             ↓
         v9A Settlement Engine
             ↓
 July    v10A Custody Controls
             ↓
-        v11A Compliance Layer
+        v11A Policy Engine
             ↓
-        v12A Audit & Reporting
+        v12A Compliance Layer
+            ↓
+        v13A Audit & Reporting
 
         Track B: Public Blockchain (Secondary)
         ──────────────────────────────────────
@@ -331,8 +376,9 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No asset tokenization or settlement workflows yet
+- No settlement workflows yet
 - No custody or compliance layers yet
+- No policy engine yet
 - No smart contracts or advanced consensus features yet
 
 ### Prototype Simplifications
@@ -352,7 +398,7 @@ Run the full test suite with:
 cargo test
 ```
 
-Current test suite includes 37 integration tests covering:
+Current test suite includes 46 integration tests covering:
 
 ### Blockchain Validation
 
@@ -413,10 +459,23 @@ Current test suite includes 37 integration tests covering:
 - Trusted handshake acceptance
 - Untrusted handshake rejection
 
+### Asset Tokenization
+
+- Fungible asset modeling
+- Non-fungible asset modeling
+- Asset issuance tracking
+- Asset ownership tracking
+- Asset transfer tracking
+- Asset balance crediting
+- Valid transfer application
+- Insufficient-balance transfer rejection
+- Issuance-to-ledger application
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
 - `src/blockchain.rs` - blockchain container and chain-wide validation
+- `src/asset.rs` - asset tokenization models, issuance, ownership, transfers, and balance ledger
 - `src/merkle.rs` - Merkle hashing helpers
 - `src/network_message.rs` - protocol messages exchanged between peers
 - `src/node_identity.rs` - permissioned node identity and network roles
@@ -430,7 +489,7 @@ Current test suite includes 37 integration tests covering:
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
 - `src/mempool.rs` - in-memory pending transaction pool
-- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, and permissioned networking behavior
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, and asset tokenization behavior
 
 ## Technologies
 
@@ -477,15 +536,21 @@ The current implementation includes:
 - Permissioned node identity
 - Trusted peer registry
 - Permissioned network handshake
+- Asset tokenization model
+- Asset issuance and ownership tracking
+- Asset balance ledger
+- Asset transfer processing
 - Peer chain synchronization
 - Longest-chain replacement
 - JSON-based blockchain persistence
 - In-memory transaction mempool
 - Mempool transaction selection and removal
 
+The implementation prioritizes readability, correctness, modularity, and incremental evolution over feature completeness. Each version is designed as an educational milestone while remaining architecturally consistent with production distributed ledger systems.
+
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will extend the permissioned networking foundation with enterprise DLT capabilities, including asset tokenization, custody controls, settlement workflows, and policy-driven authorization.
+Future releases will extend the permissioned networking and asset tokenization foundation with enterprise DLT capabilities, including custody controls, settlement workflows, and policy-driven authorization.
 
 ## References
 
