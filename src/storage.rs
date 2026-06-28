@@ -43,3 +43,9 @@ impl Storage {
         Ok(blockchain)
     }
 }
+
+impl Default for Storage {
+    fn default() -> Self {
+        Self::new()
+    }
+}

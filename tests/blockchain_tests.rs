@@ -3,6 +3,7 @@ use rust_mini_chain::asset::{
 };
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
+use rust_mini_chain::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
@@ -1553,4 +1554,443 @@ fn settlement_engine_returns_settled_and_failed_instructions() {
 
     assert_eq!(failed[0].settlement_id, "settlement-2");
     assert!(failed[0].is_failed());
+}
+
+#[test]
+fn custody_account_starts_active() {
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert_eq!(account.account_id, "custody-1");
+    assert_eq!(account.owner, "owner-1");
+    assert_eq!(account.status, CustodyAccountStatus::Active);
+    assert!(account.is_active());
+}
+
+#[test]
+fn custody_account_can_be_frozen() {
+    let mut account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    account.freeze();
+
+    assert_eq!(account.status, CustodyAccountStatus::Frozen);
+    assert!(account.is_frozen());
+}
+
+#[test]
+fn custody_account_can_be_closed() {
+    let mut account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    account.close();
+
+    assert_eq!(account.status, CustodyAccountStatus::Closed);
+    assert!(account.is_closed());
+}
+#[test]
+fn custody_registry_adds_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account));
+
+    assert_eq!(registry.account_count(), 1);
+
+    let stored = registry.get_account("custody-1").unwrap();
+
+    assert_eq!(stored.account_id, "custody-1");
+    assert_eq!(stored.owner, "owner-1");
+    assert_eq!(stored.status, CustodyAccountStatus::Active);
+}
+
+#[test]
+fn custody_registry_rejects_duplicate_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account.clone()));
+    assert!(!registry.add_account(account));
+
+    assert_eq!(registry.account_count(), 1);
+}
+
+#[test]
+fn custody_registry_freezes_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account));
+
+    assert!(registry.freeze_account("custody-1"));
+
+    let stored = registry.get_account("custody-1").unwrap();
+
+    assert_eq!(stored.status, CustodyAccountStatus::Frozen);
+    assert!(stored.is_frozen());
+}
+
+#[test]
+fn custody_registry_closes_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account));
+
+    assert!(registry.close_account("custody-1"));
+
+    let stored = registry.get_account("custody-1").unwrap();
+
+    assert_eq!(stored.status, CustodyAccountStatus::Closed);
+    assert!(stored.is_closed());
+}
+
+#[test]
+fn custody_registry_returns_false_for_missing_account_status_update() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(!registry.freeze_account("missing-custody"));
+    assert!(!registry.close_account("missing-custody"));
+}
+
+#[test]
+fn settlement_engine_executes_settlement_when_custody_accounts_are_active() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(
+        engine.execute_settlement_with_custody("settlement-1", &mut ledger, &custody_registry,)
+    );
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 300);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 200);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_settled());
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_from_frozen_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(custody_registry.freeze_account("custody-1"));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_to_frozen_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(custody_registry.freeze_account("custody-2"));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_with_closed_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(custody_registry.close_account("custody-1"));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_from_missing_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_to_missing_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
+
+#[test]
+fn custody_registry_returns_active_accounts() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(registry.freeze_account("custody-2"));
+
+    let active = registry.active_accounts();
+
+    assert_eq!(active.len(), 1);
+    assert_eq!(active[0].account_id, "custody-1");
+}
+
+#[test]
+fn custody_registry_returns_frozen_accounts() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.freeze_account("custody-1"));
+
+    let frozen = registry.frozen_accounts();
+
+    assert_eq!(frozen.len(), 1);
+    assert_eq!(frozen[0].account_id, "custody-1");
+}
+
+#[test]
+fn custody_registry_returns_closed_accounts() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.close_account("custody-1"));
+
+    let closed = registry.closed_accounts();
+
+    assert_eq!(closed.len(), 1);
+    assert_eq!(closed[0].account_id, "custody-1");
+}
+
+#[test]
+fn custody_registry_counts_account_statuses() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-3".to_string(),
+        "owner-3".to_string(),
+    )));
+
+    assert!(registry.freeze_account("custody-2"));
+    assert!(registry.close_account("custody-3"));
+
+    assert_eq!(registry.active_count(), 1);
+    assert_eq!(registry.frozen_count(), 1);
+    assert_eq!(registry.closed_count(), 1);
 }

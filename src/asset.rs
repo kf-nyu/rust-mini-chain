@@ -142,3 +142,9 @@ impl AssetLedger {
         );
     }
 }
+
+impl Default for AssetLedger {
+    fn default() -> Self {
+        Self::new()
+    }
+}

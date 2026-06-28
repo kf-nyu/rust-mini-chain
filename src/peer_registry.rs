@@ -36,3 +36,9 @@ impl PeerRegistry {
         self.trusted_peers.is_empty()
     }
 }
+
+impl Default for PeerRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
