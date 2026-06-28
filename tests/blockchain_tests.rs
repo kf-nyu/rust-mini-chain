@@ -1833,3 +1833,81 @@ fn settlement_engine_rejects_settlement_with_closed_custody_account() {
 
     assert!(stored.is_failed());
 }
+
+#[test]
+fn settlement_engine_rejects_settlement_from_missing_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_to_missing_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
