@@ -94,4 +94,25 @@ impl CustodyRegistry {
             None => false,
         }
     }
+
+    pub fn active_accounts(&self) -> Vec<&CustodyAccount> {
+        self.accounts
+            .values()
+            .filter(|account| account.is_active())
+            .collect()
+    }
+
+    pub fn frozen_accounts(&self) -> Vec<&CustodyAccount> {
+        self.accounts
+            .values()
+            .filter(|account| account.is_frozen())
+            .collect()
+    }
+
+    pub fn closed_accounts(&self) -> Vec<&CustodyAccount> {
+        self.accounts
+            .values()
+            .filter(|account| account.is_closed())
+            .collect()
+    }
 }

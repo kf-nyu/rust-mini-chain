@@ -1911,3 +1911,59 @@ fn settlement_engine_rejects_settlement_to_missing_custody_account() {
 
     assert!(stored.is_failed());
 }
+
+#[test]
+fn custody_registry_returns_active_accounts() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(registry.freeze_account("custody-2"));
+
+    let active = registry.active_accounts();
+
+    assert_eq!(active.len(), 1);
+    assert_eq!(active[0].account_id, "custody-1");
+}
+
+#[test]
+fn custody_registry_returns_frozen_accounts() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.freeze_account("custody-1"));
+
+    let frozen = registry.frozen_accounts();
+
+    assert_eq!(frozen.len(), 1);
+    assert_eq!(frozen[0].account_id, "custody-1");
+}
+
+#[test]
+fn custody_registry_returns_closed_accounts() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.close_account("custody-1"));
+
+    let closed = registry.closed_accounts();
+
+    assert_eq!(closed.len(), 1);
+    assert_eq!(closed[0].account_id, "custody-1");
+}
