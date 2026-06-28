@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CustodyAccountStatus {
@@ -41,5 +42,36 @@ impl CustodyAccount {
 
     pub fn is_closed(&self) -> bool {
         self.status == CustodyAccountStatus::Closed
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CustodyRegistry {
+    accounts: HashMap<String, CustodyAccount>,
+}
+
+impl CustodyRegistry {
+    pub fn new() -> Self {
+        Self {
+            accounts: HashMap::new(),
+        }
+    }
+
+    pub fn add_account(&mut self, account: CustodyAccount) -> bool {
+        if self.accounts.contains_key(&account.account_id) {
+            return false;
+        }
+
+        self.accounts.insert(account.account_id.clone(), account);
+
+        true
+    }
+
+    pub fn get_account(&self, account_id: &str) -> Option<&CustodyAccount> {
+        self.accounts.get(account_id)
+    }
+
+    pub fn account_count(&self) -> usize {
+        self.accounts.len()
     }
 }

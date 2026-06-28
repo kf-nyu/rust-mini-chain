@@ -3,7 +3,7 @@ use rust_mini_chain::asset::{
 };
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
-use rust_mini_chain::custody::{CustodyAccount, CustodyAccountStatus};
+use rust_mini_chain::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
@@ -1584,4 +1584,32 @@ fn custody_account_can_be_closed() {
 
     assert_eq!(account.status, CustodyAccountStatus::Closed);
     assert!(account.is_closed());
+}
+#[test]
+fn custody_registry_adds_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account));
+
+    assert_eq!(registry.account_count(), 1);
+
+    let stored = registry.get_account("custody-1").unwrap();
+
+    assert_eq!(stored.account_id, "custody-1");
+    assert_eq!(stored.owner, "owner-1");
+    assert_eq!(stored.status, CustodyAccountStatus::Active);
+}
+
+#[test]
+fn custody_registry_rejects_duplicate_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account.clone()));
+    assert!(!registry.add_account(account));
+
+    assert_eq!(registry.account_count(), 1);
 }
