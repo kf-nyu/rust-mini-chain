@@ -1,20 +1,21 @@
-use rust_mini_chain::asset::{
+use digital_asset_ledger::asset::{
     Asset, AssetIssuance, AssetLedger, AssetOwnership, AssetTransfer, AssetType,
 };
-use rust_mini_chain::async_network;
-use rust_mini_chain::blockchain::Blockchain;
-use rust_mini_chain::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
-use rust_mini_chain::mempool::Mempool;
-use rust_mini_chain::network_message::NetworkMessage;
-use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
-use rust_mini_chain::peer_registry::PeerRegistry;
-use rust_mini_chain::settlement::{SettlementEngine, SettlementInstruction, SettlementStatus};
-use rust_mini_chain::storage::Storage;
-use rust_mini_chain::transaction::Transaction;
-use rust_mini_chain::tx_input::TxInput;
-use rust_mini_chain::tx_output::TxOutput;
-use rust_mini_chain::utxo::UTXOSet;
-use rust_mini_chain::wallet::Wallet;
+use digital_asset_ledger::async_network;
+use digital_asset_ledger::blockchain::Blockchain;
+use digital_asset_ledger::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
+use digital_asset_ledger::mempool::Mempool;
+use digital_asset_ledger::network_message::NetworkMessage;
+use digital_asset_ledger::node_identity::{NodeIdentity, NodeRole};
+use digital_asset_ledger::peer_registry::PeerRegistry;
+use digital_asset_ledger::policy::{PolicyDecision, PolicyEngine};
+use digital_asset_ledger::settlement::{SettlementEngine, SettlementInstruction, SettlementStatus};
+use digital_asset_ledger::storage::Storage;
+use digital_asset_ledger::transaction::Transaction;
+use digital_asset_ledger::tx_input::TxInput;
+use digital_asset_ledger::tx_output::TxOutput;
+use digital_asset_ledger::utxo::UTXOSet;
+use digital_asset_ledger::wallet::Wallet;
 use std::fs;
 use tokio::io::AsyncWriteExt;
 
@@ -1993,4 +1994,23 @@ fn custody_registry_counts_account_statuses() {
     assert_eq!(registry.active_count(), 1);
     assert_eq!(registry.frozen_count(), 1);
     assert_eq!(registry.closed_count(), 1);
+}
+
+#[test]
+fn policy_engine_default_allows() {
+    let engine = PolicyEngine::new();
+
+    let decision = engine.evaluate();
+
+    assert_eq!(decision, PolicyDecision::Allow);
+}
+
+#[test]
+fn policy_decision_can_represent_denial_reason() {
+    let decision = PolicyDecision::Deny("amount exceeds policy limit".to_string());
+
+    assert_eq!(
+        decision,
+        PolicyDecision::Deny("amount exceeds policy limit".to_string())
+    );
 }

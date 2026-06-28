@@ -1,15 +1,15 @@
-use rust_mini_chain::asset::{Asset, AssetIssuance, AssetLedger, AssetTransfer, AssetType};
-use rust_mini_chain::async_network;
-use rust_mini_chain::blockchain::Blockchain;
-use rust_mini_chain::custody::{CustodyAccount, CustodyRegistry};
-use rust_mini_chain::mempool::Mempool;
-use rust_mini_chain::network;
-use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
-use rust_mini_chain::peer_registry::PeerRegistry;
-use rust_mini_chain::settlement::{SettlementEngine, SettlementInstruction};
-use rust_mini_chain::transaction::Transaction;
-use rust_mini_chain::tx_output::TxOutput;
-use rust_mini_chain::wallet::Wallet;
+use digital_asset_ledger::asset::{Asset, AssetIssuance, AssetLedger, AssetTransfer, AssetType};
+use digital_asset_ledger::async_network;
+use digital_asset_ledger::blockchain::Blockchain;
+use digital_asset_ledger::custody::{CustodyAccount, CustodyRegistry};
+use digital_asset_ledger::mempool::Mempool;
+use digital_asset_ledger::network;
+use digital_asset_ledger::node_identity::{NodeIdentity, NodeRole};
+use digital_asset_ledger::peer_registry::PeerRegistry;
+use digital_asset_ledger::settlement::{SettlementEngine, SettlementInstruction};
+use digital_asset_ledger::transaction::Transaction;
+use digital_asset_ledger::tx_output::TxOutput;
+use digital_asset_ledger::wallet::Wallet;
 use std::time::Instant;
 
 #[tokio::main]
