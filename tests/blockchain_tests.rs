@@ -1967,3 +1967,30 @@ fn custody_registry_returns_closed_accounts() {
     assert_eq!(closed.len(), 1);
     assert_eq!(closed[0].account_id, "custody-1");
 }
+
+#[test]
+fn custody_registry_counts_account_statuses() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(registry.add_account(CustodyAccount::new(
+        "custody-3".to_string(),
+        "owner-3".to_string(),
+    )));
+
+    assert!(registry.freeze_account("custody-2"));
+    assert!(registry.close_account("custody-3"));
+
+    assert_eq!(registry.active_count(), 1);
+    assert_eq!(registry.frozen_count(), 1);
+    assert_eq!(registry.closed_count(), 1);
+}

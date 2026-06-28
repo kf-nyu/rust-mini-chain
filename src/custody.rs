@@ -115,4 +115,16 @@ impl CustodyRegistry {
             .filter(|account| account.is_closed())
             .collect()
     }
+
+    pub fn active_count(&self) -> usize {
+        self.active_accounts().len()
+    }
+
+    pub fn frozen_count(&self) -> usize {
+        self.frozen_accounts().len()
+    }
+
+    pub fn closed_count(&self) -> usize {
+        self.closed_accounts().len()
+    }
 }
