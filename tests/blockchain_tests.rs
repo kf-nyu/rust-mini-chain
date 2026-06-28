@@ -1613,3 +1613,43 @@ fn custody_registry_rejects_duplicate_account() {
 
     assert_eq!(registry.account_count(), 1);
 }
+
+#[test]
+fn custody_registry_freezes_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account));
+
+    assert!(registry.freeze_account("custody-1"));
+
+    let stored = registry.get_account("custody-1").unwrap();
+
+    assert_eq!(stored.status, CustodyAccountStatus::Frozen);
+    assert!(stored.is_frozen());
+}
+
+#[test]
+fn custody_registry_closes_account() {
+    let mut registry = CustodyRegistry::new();
+
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert!(registry.add_account(account));
+
+    assert!(registry.close_account("custody-1"));
+
+    let stored = registry.get_account("custody-1").unwrap();
+
+    assert_eq!(stored.status, CustodyAccountStatus::Closed);
+    assert!(stored.is_closed());
+}
+
+#[test]
+fn custody_registry_returns_false_for_missing_account_status_update() {
+    let mut registry = CustodyRegistry::new();
+
+    assert!(!registry.freeze_account("missing-custody"));
+    assert!(!registry.close_account("missing-custody"));
+}

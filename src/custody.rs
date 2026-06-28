@@ -74,4 +74,24 @@ impl CustodyRegistry {
     pub fn account_count(&self) -> usize {
         self.accounts.len()
     }
+
+    pub fn freeze_account(&mut self, account_id: &str) -> bool {
+        match self.accounts.get_mut(account_id) {
+            Some(account) => {
+                account.freeze();
+                true
+            }
+            None => false,
+        }
+    }
+
+    pub fn close_account(&mut self, account_id: &str) -> bool {
+        match self.accounts.get_mut(account_id) {
+            Some(account) => {
+                account.close();
+                true
+            }
+            None => false,
+        }
+    }
 }
