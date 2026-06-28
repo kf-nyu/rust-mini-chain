@@ -1997,12 +1997,38 @@ fn custody_registry_counts_account_statuses() {
 }
 
 #[test]
-fn policy_engine_default_allows() {
-    let engine = PolicyEngine::new();
+fn policy_engine_allows_settlement_within_quantity_limit() {
+    let engine = PolicyEngine::new(1_000);
+    let instruction = SettlementInstruction::new(
+        "settlement-001".to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
 
-    let decision = engine.evaluate();
+    let decision = engine.evaluate_settlement(&instruction);
 
     assert_eq!(decision, PolicyDecision::Allow);
+}
+
+#[test]
+fn policy_engine_rejects_settlement_above_quantity_limit() {
+    let engine = PolicyEngine::new(1_000);
+    let instruction = SettlementInstruction::new(
+        "settlement-002".to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        1_500,
+    );
+
+    let decision = engine.evaluate_settlement(&instruction);
+
+    assert_eq!(
+        decision,
+        PolicyDecision::Deny("settlement quantity exceeds policy limit".to_string())
+    );
 }
 
 #[test]
