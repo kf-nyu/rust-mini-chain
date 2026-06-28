@@ -27,3 +27,9 @@ impl Wallet {
         hex::encode(self.verifying_key.to_bytes())
     }
 }
+
+impl Default for Wallet {
+    fn default() -> Self {
+        Self::new()
+    }
+}

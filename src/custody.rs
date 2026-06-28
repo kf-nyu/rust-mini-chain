@@ -128,3 +128,9 @@ impl CustodyRegistry {
         self.closed_accounts().len()
     }
 }
+
+impl Default for CustodyRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}

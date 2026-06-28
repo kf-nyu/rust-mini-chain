@@ -95,3 +95,9 @@ impl UTXOSet {
         input_total >= output_total
     }
 }
+
+impl Default for UTXOSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}

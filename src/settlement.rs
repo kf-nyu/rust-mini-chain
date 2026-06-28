@@ -228,3 +228,9 @@ impl SettlementEngine {
         }
     }
 }
+
+impl Default for SettlementEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}

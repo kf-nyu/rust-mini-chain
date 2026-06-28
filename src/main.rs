@@ -45,7 +45,7 @@ async fn main() {
     if args.len() >= 3 && args[1] == "async-demo" {
         let address = args[2].clone();
 
-        let port: u16 = address.split(':').last().unwrap().parse().unwrap();
+        let port: u16 = address.split(':').next_back().unwrap().parse().unwrap();
 
         tokio::spawn(async move {
             if let Err(error) = async_network::start_async_node(port).await {

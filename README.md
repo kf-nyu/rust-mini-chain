@@ -1,15 +1,15 @@
 # Digital Asset Ledger
 
 ![Rust](https://img.shields.io/badge/Rust-1.88+-orange)
-![Version](https://img.shields.io/badge/version-v9.0.0-success)
+![Version](https://img.shields.io/badge/version-v10.0.0-success)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Tests](https://img.shields.io/badge/tests-57%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-75%20passing-brightgreen)
 
 *A Rust-based research and engineering prototype for blockchain infrastructure, distributed systems, and enterprise digital asset architecture.*
 
 ## Overview
 
-Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, settlement processing, and blockchain validation.
+Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, settlement processing, custody controls, and blockchain validation.
 
 The system is designed as an incremental prototype platform: each release introduces a focused capability while preserving clarity around architecture, validation rules, and engineering trade-offs. This approach supports both technical depth and extensibility as the project evolves.
 
@@ -28,8 +28,8 @@ Rather than implementing a complete blockchain at once, each version builds on p
 ### Core
 
 ```bash
-cargo run --release
 cargo test
+cargo run --release
 cargo doc --open
 cargo run -- mempool-demo
 ```
@@ -49,18 +49,19 @@ cargo run -- async-demo 127.0.0.1:7000
 cargo run -- permissioned-demo
 cargo run -- asset-demo
 cargo run -- settlement-demo
+cargo run -- custody-demo
 ```
 
 ## Project Metrics
 
-Current release: `v9.0.0`
+Current release: `v10.0.0`
 
 The project is developed incrementally, with each release introducing a production-inspired capability while maintaining full test coverage and backward compatibility.
 
-- ~2,500+ lines of Rust
-- 17 Rust modules
-- 57 integration tests
-- 9 CLI demonstrations
+- ~4,100+ lines of Rust
+- 19 Rust modules
+- 75 integration tests
+- 10 CLI demonstrations
 - Modular architecture
 
 ## Implemented Features
@@ -157,6 +158,19 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Pending, settled, and failed settlement queries
 - [x] Settlement CLI demo
 
+### Custody Controls
+
+- [x] Custody account model
+- [x] Active, frozen, and closed custody account states
+- [x] Custody account registry
+- [x] Duplicate custody account rejection
+- [x] Custody account freeze and close operations
+- [x] Custody account status queries
+- [x] Custody account status counts
+- [x] Custody-aware settlement execution
+- [x] Settlement rejection for frozen, closed, or missing custody accounts
+- [x] Custody controls CLI demo
+
 ### Software Engineering
 
 - [x] Modular Rust project structure
@@ -168,7 +182,7 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Permissioned network
 - [x] Asset tokenization
 - [x] Settlement engine
-- [ ] Custody controls
+- [x] Custody controls
 - [ ] Policy engine
 - [ ] Compliance layer
 - [ ] Audit & reporting
@@ -222,15 +236,16 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
                               ┌──────────────────────┐
                               │     Asset Layer      │
                               ├──────────────────────┤
-                              │ - Tokenization       │
-                              │ - Settlement         │
-                              │ - Custody            │
-                              │ - Policy             │
-                              │ - Compliance         │
+                              │ ├── Tokenization     │
+                              │ ├── Settlement       │
+                              │ ├── Custody          │
+                              │ └── Future           │
+                              │     ├── Policy       │
+                              │     └── Compliance   │
                               └──────────────────────┘
 ```
 
-Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, transfers, and settlement execution.
+Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, transfers, custody controls, and settlement execution.
 
 ### Block Structure
 
@@ -313,8 +328,7 @@ v6.0 ✓ Tokio Async Networking
         ├─────────────────────┐
         │                     │
         ▼                     ▼
-Enterprise Digital    Public Blockchain Track
-  Assets Track 
+Enterprise Digital Assets Track          Public Blockchain Track
 
 v7A ✓ Permissioned      v7B Difficulty
     Network                 Adjustment
@@ -326,7 +340,7 @@ v8A ✓ Asset             v8B Rewards
 v9A ✓ Settlement        v9B Fork
     Engine                  Handling
 
-v10A Custody            v10B Smart
+v10A ✓ Custody          v10B Smart
      Controls               Contracts
 
 v11A Policy             v11B Light
@@ -362,7 +376,7 @@ June    ✓ v1.0 Blockchain Fundamentals
             ↓
         ✓ v9A Settlement Engine
             ↓
-July    v10A Custody Controls
+        ✓ v10A Custody Controls
             ↓
         v11A Policy Engine
             ↓
@@ -376,11 +390,11 @@ July    v10A Custody Controls
             ↓
         v8B Mining Rewards & Fees
             ↓
-        v9B Fork Handling
+July    v9B Fork Handling
             ↓
         v10B Smart Contracts
             ↓
-August  v11B Light Clients (SPV)
+      v11B Light Clients (SPV)
 ```
 
 ## Limitations
@@ -389,7 +403,7 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No custody or compliance layers yet
+- No compliance layer yet
 - No policy engine yet
 - No smart contracts or advanced consensus features yet
 
@@ -410,7 +424,7 @@ Run the full test suite with:
 cargo test
 ```
 
-Current test suite includes 57 integration tests covering:
+Current test suite includes 75 integration tests covering:
 
 ### Blockchain Validation
 
@@ -495,12 +509,26 @@ Current test suite includes 57 integration tests covering:
 - Pending, settled, and failed settlement queries
 - Settlement engine CLI demonstration
 
+### Custody Controls
+
+- Custody account creation
+- Custody account status transitions
+- Duplicate custody account rejection
+- Missing custody account status update rejection
+- Custody account status queries
+- Custody account status counts
+- Custody-aware settlement execution
+- Settlement rejection for frozen custody accounts
+- Settlement rejection for closed custody accounts
+- Settlement rejection for missing custody accounts
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
 - `src/blockchain.rs` - blockchain container and chain-wide validation
 - `src/asset.rs` - asset tokenization models, issuance, ownership, transfers, and balance ledger
 - `src/settlement.rs` - settlement instruction model, settlement lifecycle state, and settlement engine
+- `src/custody.rs` - custody account model, custody registry, account lifecycle state, and custody control queries
 - `src/merkle.rs` - Merkle hashing helpers
 - `src/network_message.rs` - protocol messages exchanged between peers
 - `src/node_identity.rs` - permissioned node identity and network roles
@@ -514,7 +542,7 @@ Current test suite includes 57 integration tests covering:
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
 - `src/mempool.rs` - in-memory pending transaction pool
-- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, asset tokenization, and settlement behavior
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, asset tokenization, settlement behavior, and custody controls
 
 ## Technologies
 
@@ -565,9 +593,10 @@ The current implementation includes:
 - Asset issuance and ownership tracking
 - Asset balance ledger
 - Asset transfer processing
+- Custody account lifecycle controls
 - Settlement instruction model
 - Settlement lifecycle state
-- Settlement execution against the asset ledger
+- Custody-aware settlement execution against the asset ledger
 - Settlement status queries
 - Peer chain synchronization
 - Longest-chain replacement
@@ -579,7 +608,7 @@ The implementation prioritizes readability, correctness, modularity, and increme
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will extend the permissioned networking, asset tokenization, and settlement foundation with enterprise digital asset capabilities, including custody controls and policy-driven authorization.
+Future releases will extend the permissioned networking, asset tokenization, settlement, and custody foundation with enterprise digital asset capabilities, including compliance controls and policy-driven authorization.
 
 ## References
 

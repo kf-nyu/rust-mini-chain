@@ -26,7 +26,6 @@ impl Mempool {
 
     /// Adds a transaction to the mempool if it passes basic signature validation
     /// and is not already present.
-
     pub fn add_transaction(&mut self, transaction: Transaction) -> bool {
         if !transaction.verify() {
             return false;
