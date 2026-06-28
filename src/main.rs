@@ -1,7 +1,7 @@
 use rust_mini_chain::asset::{Asset, AssetIssuance, AssetLedger, AssetTransfer, AssetType};
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
-// use rust_mini_chain::custody::{CustodyAccount, CustodyAccountStatus};
+use rust_mini_chain::custody::{CustodyAccount, CustodyRegistry};
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
@@ -373,6 +373,106 @@ async fn main() {
         );
 
         println!("Settlement engine demo complete");
+
+        return;
+    }
+
+    // Demonstrates custody controls applied to settlement execution.
+    // Active accounts can settle, while frozen accounts block settlement.
+    if args.len() >= 2 && args[1] == "custody-demo" {
+        println!("Custody controls demo");
+
+        let asset = Asset::new(
+            "asset-1".to_string(),
+            "Digital Dallar".to_string(),
+            "DUSD".to_string(),
+            AssetType::Fungible,
+            1_000_000,
+        );
+
+        let issuance = AssetIssuance::new(asset.clone(), "custody-issuer".to_string());
+
+        let mut ledger = AssetLedger::new();
+        ledger.apply_issuance(&issuance);
+
+        let mut custody_registry = CustodyRegistry::new();
+
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-issuer".to_string(),
+            "issue-owner".to_string(),
+        ));
+
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-wallet-1".to_string(),
+            "owner-1".to_string(),
+        ));
+
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-wallet-2".to_string(),
+            "owner-2".to_string(),
+        ));
+
+        custody_registry.freeze_account("custody-wallet-2");
+
+        let mut engine = SettlementEngine::new();
+
+        let settlement_1 = SettlementInstruction::new(
+            "settlement-1".to_string(),
+            asset.asset_id.clone(),
+            "custody-issuer".to_string(),
+            "custody-wallet-1".to_string(),
+            250_000,
+        );
+
+        let settlement_2 = SettlementInstruction::new(
+            "settlement-2".to_string(),
+            asset.asset_id.clone(),
+            "custody-issuer".to_string(),
+            "custody-wallet-2".to_string(),
+            100_000,
+        );
+
+        engine.add_instruction(settlement_1);
+        engine.add_instruction(settlement_2);
+
+        let accepted_1 =
+            engine.execute_settlement_with_custody("settlement-1", &mut ledger, &custody_registry);
+
+        let accepted_2 =
+            engine.execute_settlement_with_custody("settlement-2", &mut ledger, &custody_registry);
+
+        println!("Settlement 1 accepted: {accepted_1}");
+        println!("Settlement 2 accepted: {accepted_2}");
+
+        println!(
+            "Active custody accounts: {}",
+            custody_registry.active_count()
+        );
+        println!(
+            "Frozen custody accounts: {}",
+            custody_registry.frozen_count()
+        );
+        println!(
+            "Closed custody accounts: {}",
+            custody_registry.closed_count()
+        );
+
+        println!(
+            "Issuer balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-issuer")
+        );
+
+        println!(
+            "Wallet-1 balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-wallet-1")
+        );
+
+        println!(
+            "Wallet-2 balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-wallet-2")
+        );
+
+        println!("Custody controls demo complete");
 
         return;
     }
