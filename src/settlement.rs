@@ -1,4 +1,5 @@
 use crate::asset::{AssetLedger, AssetTransfer};
+use crate::custody::CustodyRegistry;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -167,10 +168,63 @@ impl SettlementEngine {
             .filter(|instruction| instruction.is_settled())
             .collect()
     }
+
     pub fn failed_instructions(&self) -> Vec<&SettlementInstruction> {
         self.instructions
             .values()
             .filter(|instruction| instruction.is_failed())
             .collect()
+    }
+
+    pub fn execute_settlement_with_custody(
+        &mut self,
+        settlement_id: &str,
+        ledger: &mut AssetLedger,
+        custody_registry: &CustodyRegistry,
+    ) -> bool {
+        let instruction = match self.instructions.get_mut(settlement_id) {
+            Some(instruction) => instruction,
+            None => return false,
+        };
+
+        if !instruction.is_pending() {
+            return false;
+        }
+
+        let from_account = match custody_registry.get_account(&instruction.from) {
+            Some(account) => account,
+            None => {
+                instruction.mark_failed();
+                return false;
+            }
+        };
+
+        let to_account = match custody_registry.get_account(&instruction.to) {
+            Some(account) => account,
+            None => {
+                instruction.mark_failed();
+                return false;
+            }
+        };
+
+        if !from_account.is_active() || !to_account.is_active() {
+            instruction.mark_failed();
+            return false;
+        }
+
+        let transfer = AssetTransfer::new(
+            instruction.asset_id.clone(),
+            instruction.from.clone(),
+            instruction.to.clone(),
+            instruction.quantity,
+        );
+
+        if ledger.apply_transfer(&transfer) {
+            instruction.mark_settled();
+            true
+        } else {
+            instruction.mark_failed();
+            false
+        }
     }
 }

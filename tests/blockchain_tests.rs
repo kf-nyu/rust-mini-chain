@@ -1653,3 +1653,91 @@ fn custody_registry_returns_false_for_missing_account_status_update() {
     assert!(!registry.freeze_account("missing-custody"));
     assert!(!registry.close_account("missing-custody"));
 }
+
+#[test]
+fn settlement_engine_executes_settlement_when_custody_accounts_are_active() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(
+        engine.execute_settlement_with_custody("settlement-1", &mut ledger, &custody_registry,)
+    );
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 300);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 200);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_settled());
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_from_frozen_custody_account() {
+    let mut ledger = AssetLedger::new();
+
+    ledger.credit("asset-1", "custody-1", 500);
+
+    let mut custody_registry = CustodyRegistry::new();
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-1".to_string(),
+        "owner-1".to_string(),
+    )));
+
+    assert!(custody_registry.add_account(CustodyAccount::new(
+        "custody-2".to_string(),
+        "owner-2".to_string(),
+    )));
+
+    assert!(custody_registry.freeze_account("custody-1"));
+
+    let mut engine = SettlementEngine::new();
+
+    let instruction = SettlementInstruction::new(
+        "settlement-1".to_string(),
+        "asset-1".to_string(),
+        "custody-1".to_string(),
+        "custody-2".to_string(),
+        200,
+    );
+
+    assert!(engine.add_instruction(instruction));
+
+    assert!(!engine.execute_settlement_with_custody(
+        "settlement-1",
+        &mut ledger,
+        &custody_registry,
+    ));
+
+    assert_eq!(ledger.balance_of("asset-1", "custody-1"), 500);
+    assert_eq!(ledger.balance_of("asset-1", "custody-2"), 0);
+
+    let stored = engine.get_instruction("settlement-1").unwrap();
+
+    assert!(stored.is_failed());
+}
