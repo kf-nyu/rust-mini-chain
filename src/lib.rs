@@ -6,6 +6,8 @@ pub mod async_network;
 pub mod block;
 /// Blockchain container and chain-wide validation rules.
 pub mod blockchain;
+/// Defines custody accounts and custody account lifecycle state.
+pub mod custody;
 /// Pending transaction pool used before block mining.
 pub mod mempool;
 /// Merkle tree hashing helpers for block transaction roots.

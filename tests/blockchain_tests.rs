@@ -3,6 +3,7 @@ use rust_mini_chain::asset::{
 };
 use rust_mini_chain::async_network;
 use rust_mini_chain::blockchain::Blockchain;
+use rust_mini_chain::custody::{CustodyAccount, CustodyAccountStatus};
 use rust_mini_chain::mempool::Mempool;
 use rust_mini_chain::network_message::NetworkMessage;
 use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
@@ -1553,4 +1554,34 @@ fn settlement_engine_returns_settled_and_failed_instructions() {
 
     assert_eq!(failed[0].settlement_id, "settlement-2");
     assert!(failed[0].is_failed());
+}
+
+#[test]
+fn custody_account_starts_active() {
+    let account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    assert_eq!(account.account_id, "custody-1");
+    assert_eq!(account.owner, "owner-1");
+    assert_eq!(account.status, CustodyAccountStatus::Active);
+    assert!(account.is_active());
+}
+
+#[test]
+fn custody_account_can_be_frozen() {
+    let mut account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    account.freeze();
+
+    assert_eq!(account.status, CustodyAccountStatus::Frozen);
+    assert!(account.is_frozen());
+}
+
+#[test]
+fn custody_account_can_be_closed() {
+    let mut account = CustodyAccount::new("custody-1".to_string(), "owner-1".to_string());
+
+    account.close();
+
+    assert_eq!(account.status, CustodyAccountStatus::Closed);
+    assert!(account.is_closed());
 }
