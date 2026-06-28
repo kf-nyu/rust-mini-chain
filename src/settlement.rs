@@ -1,5 +1,6 @@
 use crate::asset::{AssetLedger, AssetTransfer};
 use crate::custody::CustodyRegistry;
+use crate::policy::{PolicyDecision, PolicyEngine};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -226,6 +227,32 @@ impl SettlementEngine {
             instruction.mark_failed();
             false
         }
+    }
+
+    pub fn execute_settlement_with_policy(
+        &mut self,
+        settlement_id: &str,
+        ledger: &mut AssetLedger,
+        custody_registry: &CustodyRegistry,
+        policy_engine: &PolicyEngine,
+    ) -> bool {
+        let Some(instruction) = self.instructions.get_mut(settlement_id) else {
+            return false;
+        };
+
+        if instruction.status != SettlementStatus::Pending {
+            return false;
+        }
+
+        match policy_engine.evaluate_settlement(instruction) {
+            PolicyDecision::Allow => {}
+            PolicyDecision::Deny(_) => {
+                instruction.mark_failed();
+                return false;
+            }
+        }
+
+        self.execute_settlement_with_custody(settlement_id, ledger, custody_registry)
     }
 }
 
