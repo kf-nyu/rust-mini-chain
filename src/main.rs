@@ -486,13 +486,13 @@ async fn main() {
 
         let asset = Asset::new(
             "asset-1".to_string(),
-            "Digital Dallar".to_string(),
+            "Digital Dollar".to_string(),
             "DUSD".to_string(),
             AssetType::Fungible,
             1_000_000,
         );
 
-        let issuance = AssetIssuance::new(asset.clone(), "issuer-1".to_string());
+        let issuance = AssetIssuance::new(asset.clone(), "custody-issuer".to_string());
 
         let mut ledger = AssetLedger::new();
         ledger.apply_issuance(&issuance);
