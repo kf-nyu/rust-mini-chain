@@ -34,6 +34,17 @@ impl ComplianceEngine {
         }
     }
 
+    pub fn evaluate_participants(&self, sender: &str, receiver: &str) -> ComplianceDecision {
+        if !self.is_participant_approved(sender) {
+            return ComplianceDecision::Deny("sender is not approved".to_string());
+        }
+        if !self.is_participant_approved(receiver) {
+            return ComplianceDecision::Deny("receiver is not approved".to_string());
+        }
+
+        ComplianceDecision::Allow
+    }
+
     pub fn evaluate(&self) -> ComplianceDecision {
         ComplianceDecision::Allow
     }

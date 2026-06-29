@@ -2283,3 +2283,40 @@ fn compliance_engine_rejects_unapproved_participant() {
         ComplianceDecision::Deny("participant is not approved".to_string())
     );
 }
+
+#[test]
+fn compliance_engine_allows_approved_participants() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("alice".to_string());
+    engine.approve_participant("bob".to_string());
+
+    let decision = engine.evaluate_participants("alice", "bob");
+
+    assert_eq!(decision, ComplianceDecision::Allow);
+}
+
+#[test]
+fn compliance_engine_rejects_unapproved_sender() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("bob".to_string());
+
+    let decision = engine.evaluate_participants("alice", "bob");
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("sender is not approved".to_string())
+    );
+}
+
+#[test]
+fn compliance_engine_rejects_unapproved_receiver() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("alice".to_string());
+
+    let decision = engine.evaluate_participants("alice", "bob");
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("receiver is not approved".to_string())
+    );
+}
