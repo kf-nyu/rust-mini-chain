@@ -1,20 +1,21 @@
-use rust_mini_chain::asset::{
+use digital_asset_ledger::asset::{
     Asset, AssetIssuance, AssetLedger, AssetOwnership, AssetTransfer, AssetType,
 };
-use rust_mini_chain::async_network;
-use rust_mini_chain::blockchain::Blockchain;
-use rust_mini_chain::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
-use rust_mini_chain::mempool::Mempool;
-use rust_mini_chain::network_message::NetworkMessage;
-use rust_mini_chain::node_identity::{NodeIdentity, NodeRole};
-use rust_mini_chain::peer_registry::PeerRegistry;
-use rust_mini_chain::settlement::{SettlementEngine, SettlementInstruction, SettlementStatus};
-use rust_mini_chain::storage::Storage;
-use rust_mini_chain::transaction::Transaction;
-use rust_mini_chain::tx_input::TxInput;
-use rust_mini_chain::tx_output::TxOutput;
-use rust_mini_chain::utxo::UTXOSet;
-use rust_mini_chain::wallet::Wallet;
+use digital_asset_ledger::async_network;
+use digital_asset_ledger::blockchain::Blockchain;
+use digital_asset_ledger::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
+use digital_asset_ledger::mempool::Mempool;
+use digital_asset_ledger::network_message::NetworkMessage;
+use digital_asset_ledger::node_identity::{NodeIdentity, NodeRole};
+use digital_asset_ledger::peer_registry::PeerRegistry;
+use digital_asset_ledger::policy::{PolicyDecision, PolicyEngine};
+use digital_asset_ledger::settlement::{SettlementEngine, SettlementInstruction, SettlementStatus};
+use digital_asset_ledger::storage::Storage;
+use digital_asset_ledger::transaction::Transaction;
+use digital_asset_ledger::tx_input::TxInput;
+use digital_asset_ledger::tx_output::TxOutput;
+use digital_asset_ledger::utxo::UTXOSet;
+use digital_asset_ledger::wallet::Wallet;
 use std::fs;
 use tokio::io::AsyncWriteExt;
 
@@ -1993,4 +1994,240 @@ fn custody_registry_counts_account_statuses() {
     assert_eq!(registry.active_count(), 1);
     assert_eq!(registry.frozen_count(), 1);
     assert_eq!(registry.closed_count(), 1);
+}
+
+#[test]
+fn policy_engine_allows_settlement_within_quantity_limit() {
+    let engine = PolicyEngine::new(1_000);
+    let instruction = SettlementInstruction::new(
+        "settlement-001".to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    let decision = engine.evaluate_settlement(&instruction);
+
+    assert_eq!(decision, PolicyDecision::Allow);
+}
+
+#[test]
+fn policy_engine_rejects_settlement_above_quantity_limit() {
+    let engine = PolicyEngine::new(1_000);
+    let instruction = SettlementInstruction::new(
+        "settlement-002".to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        1_500,
+    );
+
+    let decision = engine.evaluate_settlement(&instruction);
+
+    assert_eq!(
+        decision,
+        PolicyDecision::Deny("settlement quantity exceeds policy limit".to_string())
+    );
+}
+
+#[test]
+fn policy_decision_can_represent_denial_reason() {
+    let decision = PolicyDecision::Deny("amount exceeds policy limit".to_string());
+
+    assert_eq!(
+        decision,
+        PolicyDecision::Deny("amount exceeds policy limit".to_string())
+    );
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_above_policy_quantity_limit() {
+    let settlement_id = "settlement-policy-001";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let policy_engine = PolicyEngine::new(1_000);
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        1_500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_policy(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+    );
+
+    assert!(!executed);
+
+    let failed = engine
+        .get_instruction(settlement_id)
+        .expect("settlement should exist");
+
+    assert_eq!(failed.status, SettlementStatus::Failed);
+    assert_eq!(ledger.balance_of("asset-001", "alice-custody"), 2_000);
+    assert_eq!(ledger.balance_of("asset-001", "bob-custody"), 0);
+}
+
+#[test]
+fn settlement_engine_executes_settlement_within_policy_quantity_limit() {
+    let settlement_id = "settlement-policy-002";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let policy_engine = PolicyEngine::new(1_000);
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_policy(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+    );
+
+    assert!(executed);
+
+    let settled = engine
+        .get_instruction(settlement_id)
+        .expect("settlement should exist");
+
+    assert_eq!(settled.status, SettlementStatus::Settled);
+    assert_eq!(ledger.balance_of("asset-001", "alice-custody"), 1_500);
+    assert_eq!(ledger.balance_of("asset-001", "bob-custody"), 500);
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_from_blocked_policy_account() {
+    let settlement_id = "settlement-policy-005";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let mut policy_engine = PolicyEngine::new(1_000);
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    policy_engine.block_account("alice-custody".to_string());
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_policy(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+    );
+
+    assert!(!executed);
+
+    let failed = engine
+        .get_instruction(settlement_id)
+        .expect("settlement should exist");
+
+    assert_eq!(failed.status, SettlementStatus::Failed);
+    assert_eq!(ledger.balance_of("asset-001", "alice-custody"), 2_000);
+    assert_eq!(ledger.balance_of("asset-001", "bob-custody"), 0);
+}
+
+#[test]
+fn policy_engine_rejects_blocked_sender_account() {
+    let mut engine = PolicyEngine::new(1_000);
+    engine.block_account("alice-custody".to_string());
+
+    let instruction = SettlementInstruction::new(
+        "settlement-policy-003".to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    let decision = engine.evaluate_settlement(&instruction);
+
+    assert_eq!(
+        decision,
+        PolicyDecision::Deny("sender custody account is blocked".to_string())
+    );
+}
+
+#[test]
+fn policy_engine_rejects_blocked_receiver_account() {
+    let mut engine = PolicyEngine::new(1_000);
+    engine.block_account("bob-custody".to_string());
+
+    let instruction = SettlementInstruction::new(
+        "settlement-policy-004".to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    let decision = engine.evaluate_settlement(&instruction);
+
+    assert_eq!(
+        decision,
+        PolicyDecision::Deny("receiver custody account is blocked".to_string())
+    );
 }

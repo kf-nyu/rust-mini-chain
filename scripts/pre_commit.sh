@@ -10,4 +10,7 @@ echo "==> Running custody demo..."
 cargo run -- custody-demo
 
 echo
+echo "==> Running policy  demo..."
+cargo run -- policy-demo
+echo
 echo "🎉 Ready to commit."

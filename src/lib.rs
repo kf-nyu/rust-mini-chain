@@ -20,6 +20,8 @@ pub mod network_message;
 pub mod node_identity;
 /// trusted peer registry
 pub mod peer_registry;
+/// Policy engine for evaluating settlement authorization rules.
+pub mod policy;
 /// Defines settlement instructions and settlement lifecycle state.
 pub mod settlement;
 /// File-based blockchain persistence helper.

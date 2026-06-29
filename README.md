@@ -1,15 +1,15 @@
 # Digital Asset Ledger
 
 ![Rust](https://img.shields.io/badge/Rust-1.88+-orange)
-![Version](https://img.shields.io/badge/version-v10.0.0-success)
+![Version](https://img.shields.io/badge/version-v11.0.0-success)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Tests](https://img.shields.io/badge/tests-75%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-83%20passing-brightgreen)
 
 *A Rust-based research and engineering prototype for blockchain infrastructure, distributed systems, and enterprise digital asset architecture.*
 
 ## Overview
 
-Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, settlement processing, custody controls, and blockchain validation.
+Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, settlement processing, custody controls, and enterprise policy enforcement.
 
 The system is designed as an incremental prototype platform: each release introduces a focused capability while preserving clarity around architecture, validation rules, and engineering trade-offs. This approach supports both technical depth and extensibility as the project evolves.
 
@@ -50,18 +50,20 @@ cargo run -- permissioned-demo
 cargo run -- asset-demo
 cargo run -- settlement-demo
 cargo run -- custody-demo
+cargo run -- policy-demo
 ```
 
 ## Project Metrics
 
-Current release: `v10.0.0`
+Current release: `v11.0.0`
 
 The project is developed incrementally, with each release introducing a production-inspired capability while maintaining full test coverage and backward compatibility.
 
 - ~4,100+ lines of Rust
-- 19 Rust modules
-- 75 integration tests
-- 10 CLI demonstrations
+- 20 Rust modules
+- 83 integration tests
+- 11 CLI demonstrations
+- GitHub Actions CI workflow
 - Modular architecture
 
 ## Implemented Features
@@ -171,6 +173,14 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Settlement rejection for frozen, closed, or missing custody accounts
 - [x] Custody controls CLI demo
 
+### Policy Engine
+
+- [x] Policy decision model
+- [x] Policy-aware settlement execution
+- [x] Settlement quantity limit policy
+- [x] Blocked custody account policy
+- [x] Policy engine CLI demo
+
 ### Software Engineering
 
 - [x] Modular Rust project structure
@@ -183,7 +193,7 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Asset tokenization
 - [x] Settlement engine
 - [x] Custody controls
-- [ ] Policy engine
+- [x] Policy engine
 - [ ] Compliance layer
 - [ ] Audit & reporting
 
@@ -225,27 +235,28 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
                      ┌───────────────────────┐
                      │      Blockchain       │
                      └───────────────────────┘
-                           │            │ 
-             Persistence   │            │  Networking
-                           ▼            ▼
-                     ┌──────────┐  ┌──────────────────┐
-                     │ Storage  │  │ Permissioned P2P │
-                     └──────────┘  └──────────────────┘
+                         │              │ 
+           Persistence   │              │  Networking
+                         ▼              ▼
+                 ┌──────────┐  ┌──────────────────┐
+                 │ Storage  │  │ Permissioned P2P │
+                 └──────────┘  └──────────────────┘
                                         │ 
                                         ▼
-                              ┌──────────────────────┐
-                              │     Asset Layer      │
-                              ├──────────────────────┤
-                              │ ├── Tokenization     │
-                              │ ├── Settlement       │
-                              │ ├── Custody          │
-                              │ └── Future           │
-                              │     ├── Policy       │
-                              │     └── Compliance   │
-                              └──────────────────────┘
+                             ┌──────────────────────┐
+                             │     Asset Layer      │
+                             ├──────────────────────┤
+                             │ ├── Tokenization     │
+                             │ ├── Settlement       │
+                             │ │   ├── Custody      │
+                             │ │   └── Policy       │
+                             │ └── Future           │
+                             │     ├── Compliance   │
+                             │     └── Audit        │
+                             └──────────────────────┘
 ```
 
-Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, transfers, custody controls, and settlement execution.
+Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, transfers, custody controls, policy authorization, and settlement execution.
 
 ### Block Structure
 
@@ -298,6 +309,8 @@ Chain synchronization validation additionally checks:
 
 Permissioned networking additionally validates node identity against the trusted peer registry before accepting participation in the network.
 
+Settlement execution first evaluates enterprise policy rules before custody validation. Current policy rules include settlement quantity limits and blocked custody accounts. Successful policy validation is followed by custody validation before asset balances are updated.
+
 Validation is performed during:
 
 - Local blockchain verification
@@ -325,10 +338,11 @@ v5.0 ✓ Transaction Mempool
         │
 v6.0 ✓ Tokio Async Networking
         │
-        ├─────────────────────┐
-        │                     │
-        ▼                     ▼
-Enterprise Digital Assets Track          Public Blockchain Track
+        ├──────────────────────┐
+        │                      │
+        ▼                      ▼
+Enterprise Digital   Public Blockchain Track
+    Assets Track
 
 v7A ✓ Permissioned      v7B Difficulty
     Network                 Adjustment
@@ -343,8 +357,8 @@ v9A ✓ Settlement        v9B Fork
 v10A ✓ Custody          v10B Smart
      Controls               Contracts
 
-v11A Policy             v11B Light
-     Engine                 Clients
+v11A ✓ Policy          v11B Light
+     Engine                Clients
 
 v12A Compliance
      Layer
@@ -378,7 +392,7 @@ June    ✓ v1.0 Blockchain Fundamentals
             ↓
         ✓ v10A Custody Controls
             ↓
-        v11A Policy Engine
+        ✓ v11A Policy Engine
             ↓
         v12A Compliance Layer
             ↓
@@ -404,7 +418,7 @@ This implementation is still evolving. The current codebase intentionally omits 
 ### Current Gaps
 
 - No compliance layer yet
-- No policy engine yet
+- No audit/reporting layer yet
 - No smart contracts or advanced consensus features yet
 
 ### Prototype Simplifications
@@ -424,7 +438,7 @@ Run the full test suite with:
 cargo test
 ```
 
-Current test suite includes 75 integration tests covering:
+Current test suite includes 83 integration tests covering:
 
 ### Blockchain Validation
 
@@ -522,6 +536,15 @@ Current test suite includes 75 integration tests covering:
 - Settlement rejection for closed custody accounts
 - Settlement rejection for missing custody accounts
 
+### Policy Engine
+
+- Policy decision (Allow/Deny) evaluation
+- Settlement quantity limit enforcement
+- Blocked sender rejection
+- Blocked receiver rejection
+- Policy-aware settlement execution
+- Policy rejection before custody execution
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
@@ -529,6 +552,7 @@ Current test suite includes 75 integration tests covering:
 - `src/asset.rs` - asset tokenization models, issuance, ownership, transfers, and balance ledger
 - `src/settlement.rs` - settlement instruction model, settlement lifecycle state, and settlement engine
 - `src/custody.rs` - custody account model, custody registry, account lifecycle state, and custody control queries
+- `src/policy.rs` - policy decision model, settlement authorization rules, and policy-aware settlement checks
 - `src/merkle.rs` - Merkle hashing helpers
 - `src/network_message.rs` - protocol messages exchanged between peers
 - `src/node_identity.rs` - permissioned node identity and network roles
@@ -542,7 +566,7 @@ Current test suite includes 75 integration tests covering:
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
 - `src/mempool.rs` - in-memory pending transaction pool
-- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, asset tokenization, settlement behavior, and custody controls
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, asset tokenization, settlement behavior, custody controls, and policy engine behavior
 
 ## Technologies
 
@@ -597,6 +621,7 @@ The current implementation includes:
 - Settlement instruction model
 - Settlement lifecycle state
 - Custody-aware settlement execution against the asset ledger
+- Policy-driven settlement authorization
 - Settlement status queries
 - Peer chain synchronization
 - Longest-chain replacement
@@ -608,7 +633,7 @@ The implementation prioritizes readability, correctness, modularity, and increme
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-Future releases will extend the permissioned networking, asset tokenization, settlement, and custody foundation with enterprise digital asset capabilities, including compliance controls and policy-driven authorization.
+The current implementation includes policy-driven settlement authorization. Future releases will extend this foundation with enterprise compliance controls and audit/reporting capabilities.
 
 ## References
 
