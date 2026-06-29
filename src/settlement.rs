@@ -1,4 +1,5 @@
 use crate::asset::{AssetLedger, AssetTransfer};
+use crate::compliance::{ComplianceDecision, ComplianceEngine};
 use crate::custody::CustodyRegistry;
 use crate::policy::{PolicyDecision, PolicyEngine};
 use serde::{Deserialize, Serialize};
@@ -64,6 +65,13 @@ impl SettlementInstruction {
 pub struct SettlementEngine {
     instructions: HashMap<String, SettlementInstruction>,
 }
+
+impl Default for SettlementEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SettlementEngine {
     pub fn new() -> Self {
         Self {
@@ -254,10 +262,40 @@ impl SettlementEngine {
 
         self.execute_settlement_with_custody(settlement_id, ledger, custody_registry)
     }
-}
 
-impl Default for SettlementEngine {
-    fn default() -> Self {
-        Self::new()
+    pub fn execute_settlement_with_compliance(
+        &mut self,
+        settlement_id: &str,
+        ledger: &mut AssetLedger,
+        custody_registry: &CustodyRegistry,
+        policy_engine: &PolicyEngine,
+        compliance_engine: &ComplianceEngine,
+    ) -> bool {
+        let instruction = match self.instructions.get_mut(settlement_id) {
+            Some(instruction) => instruction,
+            None => return false,
+        };
+
+        if !instruction.is_pending() {
+            return false;
+        }
+
+        match compliance_engine.evaluate_participants(&instruction.from, &instruction.to) {
+            ComplianceDecision::Allow => {}
+            ComplianceDecision::Deny(_) => {
+                instruction.mark_failed();
+                return false;
+            }
+        }
+
+        match policy_engine.evaluate_settlement(instruction) {
+            PolicyDecision::Allow => {}
+            PolicyDecision::Deny(_) => {
+                instruction.mark_failed();
+                return false;
+            }
+        }
+
+        self.execute_settlement_with_custody(settlement_id, ledger, custody_registry)
     }
 }

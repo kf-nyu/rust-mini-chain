@@ -3,6 +3,7 @@ use digital_asset_ledger::asset::{
 };
 use digital_asset_ledger::async_network;
 use digital_asset_ledger::blockchain::Blockchain;
+use digital_asset_ledger::compliance::{ComplianceDecision, ComplianceEngine};
 use digital_asset_ledger::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
 use digital_asset_ledger::mempool::Mempool;
 use digital_asset_ledger::network_message::NetworkMessage;
@@ -2230,4 +2231,252 @@ fn policy_engine_rejects_blocked_receiver_account() {
         decision,
         PolicyDecision::Deny("receiver custody account is blocked".to_string())
     );
+}
+
+#[test]
+fn compliance_engine_default_allows() {
+    let engine = ComplianceEngine::new();
+
+    let decision = engine.evaluate();
+
+    assert_eq!(decision, ComplianceDecision::Allow);
+}
+
+#[test]
+fn compliance_decision_can_represent_denial_reason() {
+    let decision = ComplianceDecision::Deny("participant failed compliance check".to_string());
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("participant failed compliance check".to_string())
+    );
+}
+
+#[test]
+fn compliance_engine_approves_participant() {
+    let mut engine = ComplianceEngine::new();
+
+    let added = engine.approve_participant("alice".to_string());
+
+    assert!(added);
+    assert!(engine.is_participant_approved("alice"));
+}
+
+#[test]
+fn compliance_engine_allows_approved_participant() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("alice".to_string());
+
+    let decision = engine.evaluate_participant("alice");
+
+    assert_eq!(decision, ComplianceDecision::Allow);
+}
+
+#[test]
+fn compliance_engine_rejects_unapproved_participant() {
+    let engine = ComplianceEngine::new();
+
+    let decision = engine.evaluate_participant("alice");
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("participant is not approved".to_string())
+    );
+}
+
+#[test]
+fn compliance_engine_allows_approved_participants() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("alice".to_string());
+    engine.approve_participant("bob".to_string());
+
+    let decision = engine.evaluate_participants("alice", "bob");
+
+    assert_eq!(decision, ComplianceDecision::Allow);
+}
+
+#[test]
+fn compliance_engine_rejects_unapproved_sender() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("bob".to_string());
+
+    let decision = engine.evaluate_participants("alice", "bob");
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("sender is not approved".to_string())
+    );
+}
+
+#[test]
+fn compliance_engine_rejects_unapproved_receiver() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("alice".to_string());
+
+    let decision = engine.evaluate_participants("alice", "bob");
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("receiver is not approved".to_string())
+    );
+}
+
+#[test]
+fn settlement_engine_executes_settlement_with_compliance_approval() {
+    let settlement_id = "settlement-compliance-001";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let policy_engine = PolicyEngine::new(1_000);
+    let mut compliance_engine = ComplianceEngine::new();
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    compliance_engine.approve_participant("alice-custody".to_string());
+    compliance_engine.approve_participant("bob-custody".to_string());
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_compliance(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+        &compliance_engine,
+    );
+
+    assert!(executed);
+
+    let settled = engine
+        .get_instruction(settlement_id)
+        .expect("settlement should exist");
+
+    assert_eq!(settled.status, SettlementStatus::Settled);
+    assert_eq!(ledger.balance_of("asset-001", "alice-custody"), 1_500);
+    assert_eq!(ledger.balance_of("asset-001", "bob-custody"), 500);
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_with_unapproved_sender() {
+    let settlement_id = "settlement-compliance-002";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let policy_engine = PolicyEngine::new(1_000);
+    let mut compliance_engine = ComplianceEngine::new();
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    compliance_engine.approve_participant("bob-custody".to_string());
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_compliance(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+        &compliance_engine,
+    );
+
+    assert!(!executed);
+
+    let failed = engine
+        .get_instruction(settlement_id)
+        .expect("settlement should exist");
+
+    assert_eq!(failed.status, SettlementStatus::Failed);
+    assert_eq!(ledger.balance_of("asset-001", "alice-custody"), 2_000);
+    assert_eq!(ledger.balance_of("asset-001", "bob-custody"), 0);
+}
+
+#[test]
+fn settlement_engine_rejects_settlement_with_unapproved_receiver() {
+    let settlement_id = "settlement-compliance-003";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let policy_engine = PolicyEngine::new(1_000);
+    let mut compliance_engine = ComplianceEngine::new();
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    compliance_engine.approve_participant("alice-custody".to_string());
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_compliance(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+        &compliance_engine,
+    );
+
+    assert!(!executed);
+
+    let failed = engine
+        .get_instruction(settlement_id)
+        .expect("settlement should exist");
+
+    assert_eq!(failed.status, SettlementStatus::Failed);
+    assert_eq!(ledger.balance_of("asset-001", "alice-custody"), 2_000);
+    assert_eq!(ledger.balance_of("asset-001", "bob-custody"), 0);
 }
