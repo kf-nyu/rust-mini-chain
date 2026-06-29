@@ -6,6 +6,7 @@ use digital_asset_ledger::mempool::Mempool;
 use digital_asset_ledger::network;
 use digital_asset_ledger::node_identity::{NodeIdentity, NodeRole};
 use digital_asset_ledger::peer_registry::PeerRegistry;
+use digital_asset_ledger::policy::PolicyEngine;
 use digital_asset_ledger::settlement::{SettlementEngine, SettlementInstruction};
 use digital_asset_ledger::transaction::Transaction;
 use digital_asset_ledger::tx_output::TxOutput;
@@ -474,6 +475,118 @@ async fn main() {
 
         println!("Custody controls demo complete");
 
+        return;
+    }
+
+    // Demonstrates plicy-aware settlement execution.
+    // One settlement succeeds, one fails due to quantity limit,
+    // and one fails because the sender custody account is blocked
+    if args.len() >= 2 && args[1] == "policy-demo" {
+        println!("Policy engine demo");
+
+        let asset = Asset::new(
+            "asset-1".to_string(),
+            "Digital Dallar".to_string(),
+            "DUSD".to_string(),
+            AssetType::Fungible,
+            1_000_000,
+        );
+
+        let issuance = AssetIssuance::new(asset.clone(), "issuer-1".to_string());
+
+        let mut ledger = AssetLedger::new();
+        ledger.apply_issuance(&issuance);
+
+        let mut custody_registry = CustodyRegistry::new();
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-issuer".to_string(),
+            "issuer-owner".to_string(),
+        ));
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-wallet-1".to_string(),
+            "owner-1".to_string(),
+        ));
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-wallet-2".to_string(),
+            "owner-2".to_string(),
+        ));
+
+        let mut policy_engine = PolicyEngine::new(300_000);
+        policy_engine.block_account("custody-wallet-2".to_string());
+
+        let mut engine = SettlementEngine::new();
+
+        let settlement_1 = SettlementInstruction::new(
+            "settlement-1".to_string(),
+            asset.asset_id.clone(),
+            "custody-issuer".to_string(),
+            "custody-wallet-1".to_string(),
+            250_000,
+        );
+
+        let settlement_2 = SettlementInstruction::new(
+            "settlement-2".to_string(),
+            asset.asset_id.clone(),
+            "custody-issuer".to_string(),
+            "custody-wallet-1".to_string(),
+            400_000,
+        );
+
+        let settlement_3 = SettlementInstruction::new(
+            "settlement-3".to_string(),
+            asset.asset_id.clone(),
+            "custody-wallet-2".to_string(),
+            "custody-wallet-1".to_string(),
+            5_000,
+        );
+
+        engine.add_instruction(settlement_1);
+        engine.add_instruction(settlement_2);
+        engine.add_instruction(settlement_3);
+
+        let accepted_1 = engine.execute_settlement_with_policy(
+            "settlement-1",
+            &mut ledger,
+            &custody_registry,
+            &policy_engine,
+        );
+        let accepted_2 = engine.execute_settlement_with_policy(
+            "settlement-2",
+            &mut ledger,
+            &custody_registry,
+            &policy_engine,
+        );
+        let accepted_3 = engine.execute_settlement_with_policy(
+            "settlement-3",
+            &mut ledger,
+            &custody_registry,
+            &policy_engine,
+        );
+
+        println!("Settlement 1 accepted: {accepted_1}");
+        println!("Settlement 2 accepted: {accepted_2}");
+        println!("Settlement 3 accepted: {accepted_3}");
+
+        println!("Settled instructions: {}", engine.settled_count());
+        println!("Failed instructions: {}", engine.failed_count());
+        println!("Pending instructions: {}", engine.pending_count());
+
+        println!(
+            "Issuer balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-issuer")
+        );
+
+        println!(
+            "Wallet-1 balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-wallet-1")
+        );
+
+        println!(
+            "Wallet-2 balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-wallet-2")
+        );
+
+        println!("Policy engine demo complete");
         return;
     }
 
