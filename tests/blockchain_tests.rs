@@ -3,6 +3,7 @@ use digital_asset_ledger::asset::{
 };
 use digital_asset_ledger::async_network;
 use digital_asset_ledger::blockchain::Blockchain;
+use digital_asset_ledger::compliance::{ComplianceDecision, ComplianceEngine};
 use digital_asset_ledger::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
 use digital_asset_ledger::mempool::Mempool;
 use digital_asset_ledger::network_message::NetworkMessage;
@@ -2229,5 +2230,24 @@ fn policy_engine_rejects_blocked_receiver_account() {
     assert_eq!(
         decision,
         PolicyDecision::Deny("receiver custody account is blocked".to_string())
+    );
+}
+
+#[test]
+fn compliance_engine_default_allows() {
+    let engine = ComplianceEngine::new();
+
+    let decision = engine.evaluate();
+
+    assert_eq!(decision, ComplianceDecision::Allow);
+}
+
+#[test]
+fn compliance_decision_can_represent_denial_reason() {
+    let decision = ComplianceDecision::Deny("participant failed compliance check".to_string());
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("participant failed compliance check".to_string())
     );
 }

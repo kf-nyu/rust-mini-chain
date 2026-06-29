@@ -6,6 +6,8 @@ pub mod async_network;
 pub mod block;
 /// Blockchain container and chain-wide validation rules.
 pub mod blockchain;
+/// Compliance engine for evaluating regulatory and participant eligibiity rules.
+pub mod compliance;
 /// Defines custody accounts and custody account lifecycle state.
 pub mod custody;
 /// Pending transaction pool used before block mining.
