@@ -13,4 +13,8 @@ echo
 echo "==> Running policy  demo..."
 cargo run -- policy-demo
 echo
+echo
+echo "==> Running compliance  demo..."
+cargo run -- compliance-demo
+echo
 echo "🎉 Ready to commit."
