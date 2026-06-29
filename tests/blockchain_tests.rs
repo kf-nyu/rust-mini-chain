@@ -2251,3 +2251,35 @@ fn compliance_decision_can_represent_denial_reason() {
         ComplianceDecision::Deny("participant failed compliance check".to_string())
     );
 }
+
+#[test]
+fn compliance_engine_approves_participant() {
+    let mut engine = ComplianceEngine::new();
+
+    let added = engine.approve_participant("alice".to_string());
+
+    assert!(added);
+    assert!(engine.is_participant_approved("alice"));
+}
+
+#[test]
+fn compliance_engine_allows_approved_participant() {
+    let mut engine = ComplianceEngine::new();
+    engine.approve_participant("alice".to_string());
+
+    let decision = engine.evaluate_participant("alice");
+
+    assert_eq!(decision, ComplianceDecision::Allow);
+}
+
+#[test]
+fn compliance_engine_rejects_unapproved_participant() {
+    let engine = ComplianceEngine::new();
+
+    let decision = engine.evaluate_participant("alice");
+
+    assert_eq!(
+        decision,
+        ComplianceDecision::Deny("participant is not approved".to_string())
+    );
+}
