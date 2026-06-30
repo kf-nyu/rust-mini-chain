@@ -2594,3 +2594,113 @@ fn audit_engine_returns_all_events_in_order() {
     assert_eq!(events[0].event_id, "audit-001");
     assert_eq!(events[1].event_id, "audit-002");
 }
+
+#[test]
+fn settlement_engine_records_audit_events_for_successful_settlement() {
+    let settlement_id = "settlement-compliance-001";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let policy_engine = PolicyEngine::new(1_000);
+    let mut compliance_engine = ComplianceEngine::new();
+    let mut audit_engine = AuditEngine::new();
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    compliance_engine.approve_participant("alice-custody".to_string());
+    compliance_engine.approve_participant("bob-custody".to_string());
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_compliance_and_audit(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+        &compliance_engine,
+        &mut audit_engine,
+    );
+
+    assert!(executed);
+    assert_eq!(audit_engine.event_count(), 2);
+
+    let events = audit_engine.events();
+
+    assert_eq!(events[0].action, AuditAction::SettlementSubmitted);
+    assert_eq!(events[0].status, AuditStatus::Success);
+    assert_eq!(events[1].action, AuditAction::SettlementCompleted);
+    assert_eq!(events[1].status, AuditStatus::Success);
+}
+
+#[test]
+fn settlement_engine_records_audit_events_for_failed_settlement() {
+    let settlement_id = "settlement-compliance-002";
+
+    let mut engine = SettlementEngine::new();
+    let mut ledger = AssetLedger::new();
+    let mut custody_registry = CustodyRegistry::new();
+    let policy_engine = PolicyEngine::new(1_000);
+    let compliance_engine = ComplianceEngine::new();
+    let mut audit_engine = AuditEngine::new();
+
+    ledger.credit("asset-001", "alice-custody", 2_000);
+
+    custody_registry.add_account(CustodyAccount::new(
+        "alice-custody".to_string(),
+        "alice".to_string(),
+    ));
+
+    custody_registry.add_account(CustodyAccount::new(
+        "bob-custody".to_string(),
+        "bob".to_string(),
+    ));
+
+    let instruction = SettlementInstruction::new(
+        settlement_id.to_string(),
+        "asset-001".to_string(),
+        "alice-custody".to_string(),
+        "bob-custody".to_string(),
+        500,
+    );
+
+    engine.add_instruction(instruction);
+
+    let executed = engine.execute_settlement_with_compliance_and_audit(
+        settlement_id,
+        &mut ledger,
+        &custody_registry,
+        &policy_engine,
+        &compliance_engine,
+        &mut audit_engine,
+    );
+
+    assert!(!executed);
+    assert_eq!(audit_engine.event_count(), 2);
+
+    let events = audit_engine.events();
+
+    assert_eq!(events[0].action, AuditAction::SettlementSubmitted);
+    assert_eq!(events[0].status, AuditStatus::Success);
+    assert_eq!(events[1].action, AuditAction::SettlementFailed);
+    assert_eq!(events[1].status, AuditStatus::Failure);
+    assert_eq!(events[1].reason, Some("settlement rejected".to_string()));
+}
