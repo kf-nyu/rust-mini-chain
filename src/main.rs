@@ -1,5 +1,6 @@
 use digital_asset_ledger::asset::{Asset, AssetIssuance, AssetLedger, AssetTransfer, AssetType};
 use digital_asset_ledger::async_network;
+use digital_asset_ledger::audit::{AuditEngine, AuditStatus};
 use digital_asset_ledger::blockchain::Blockchain;
 use digital_asset_ledger::compliance::ComplianceEngine;
 use digital_asset_ledger::custody::{CustodyAccount, CustodyRegistry};
@@ -706,6 +707,121 @@ async fn main() {
         );
 
         println!("Compliance engine demo complete");
+        return;
+    }
+
+    // Demonstrates audit and reporting for compliance-aware settlement execution.
+    // One settlement succeeds, one fails, then audit reporting queries summarize
+    // the resulting audit trail.
+    if args.len() >= 2 && args[1] == "audit-demo" {
+        println!("Audit and reporting demo");
+
+        let asset = Asset::new(
+            "asset-1".to_string(),
+            "Digital Dollar".to_string(),
+            "DUSD".to_string(),
+            AssetType::Fungible,
+            1_000_000,
+        );
+
+        let issuance = AssetIssuance::new(asset.clone(), "custody-issuer".to_string());
+
+        let mut ledger = AssetLedger::new();
+        ledger.apply_issuance(&issuance);
+
+        let mut custody_registry = CustodyRegistry::new();
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-issuer".to_string(),
+            "issuer-owner".to_string(),
+        ));
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-wallet-1".to_string(),
+            "owner-1".to_string(),
+        ));
+        custody_registry.add_account(CustodyAccount::new(
+            "custody-wallet-2".to_string(),
+            "owner-2".to_string(),
+        ));
+
+        let policy_engine = PolicyEngine::new(300_000);
+
+        let mut compliance_engine = ComplianceEngine::new();
+        compliance_engine.approve_participant("custody-issuer".to_string());
+        compliance_engine.approve_participant("custody-wallet-1".to_string());
+
+        let mut audit_engine = AuditEngine::new();
+        let mut settlement_engine = SettlementEngine::new();
+
+        let settlement_1 = SettlementInstruction::new(
+            "settlement-1".to_string(),
+            asset.asset_id.clone(),
+            "custody-issuer".to_string(),
+            "custody-wallet-1".to_string(),
+            250_000,
+        );
+
+        let settlement_2 = SettlementInstruction::new(
+            "settlement-2".to_string(),
+            asset.asset_id.clone(),
+            "custody-wallet-2r".to_string(),
+            "custody-wallet-1".to_string(),
+            50_000,
+        );
+
+        settlement_engine.add_instruction(settlement_1);
+        settlement_engine.add_instruction(settlement_2);
+
+        let accepted_1 = settlement_engine.execute_settlement_with_compliance_and_audit(
+            "settlement-1",
+            &mut ledger,
+            &custody_registry,
+            &policy_engine,
+            &compliance_engine,
+            &mut audit_engine,
+        );
+        let accepted_2 = settlement_engine.execute_settlement_with_compliance_and_audit(
+            "settlement-2",
+            &mut ledger,
+            &custody_registry,
+            &policy_engine,
+            &compliance_engine,
+            &mut audit_engine,
+        );
+
+        println!("Settlement 1 accepted: {accepted_1}");
+        println!("Settlement 2 accepted: {accepted_2}");
+
+        println!("Total audit events: {}", audit_engine.event_count());
+        println!("Successful audit events: {}", audit_engine.success_count());
+        println!("Failed audit events: {}", audit_engine.failure_count());
+
+        let settlement_1_events = audit_engine.events_for_settlement("settlement-1");
+        let settlement_2_events = audit_engine.events_for_settlement("settlement-2");
+        let failed_events = audit_engine.events_by_status(&AuditStatus::Failure);
+
+        println!("Settlement 1 audit events: {}", settlement_1_events.len());
+        println!("Settlement 2 audit events: {}", settlement_2_events.len());
+        println!(
+            "Failed audit events returned by query: {}",
+            failed_events.len()
+        );
+
+        println!(
+            "Issuer balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-issuer")
+        );
+
+        println!(
+            "Wallet-1 balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-wallet-1")
+        );
+
+        println!(
+            "Wallet-2 balance: {}",
+            ledger.balance_of(&asset.asset_id, "custody-wallet-2")
+        );
+
+        println!("Audit and reporting demo complete");
         return;
     }
 
