@@ -1,15 +1,15 @@
 # Digital Asset Ledger
 
 ![Rust](https://img.shields.io/badge/Rust-1.88+-orange)
-![Version](https://img.shields.io/badge/version-v12.0.0-success)
+![Version](https://img.shields.io/badge/version-v13.0.0-success)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-105%20passing-brightgreen)
 
 *A Rust-based research and engineering prototype for blockchain infrastructure, distributed systems, and enterprise digital asset architecture.*
 
 ## Overview
 
-Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, settlement processing, custody controls, enterprise policy enforcement, and compliance-based participant eligibility and authorization.
+Digital Asset Ledger is a Rust implementation of core blockchain and distributed-ledger components developed from first principles. The project currently includes proof-of-work blocks, Merkle root construction, Ed25519 signatures, a Bitcoin-style UTXO transaction model, TCP-based networking, block propagation, chain synchronization, permissioned networking, asset tokenization, settlement processing, custody controls, enterprise policy enforcement, compliance-based participant eligibility and authorization, and audit/reporting capabilities.
 
 The system is designed as an incremental prototype platform: each release introduces a focused capability while preserving clarity around architecture, validation rules, and engineering trade-offs. This approach supports both technical depth and extensibility as the project evolves.
 
@@ -52,18 +52,19 @@ cargo run -- settlement-demo
 cargo run -- custody-demo
 cargo run -- policy-demo
 cargo run -- compliance-demo
+cargo run -- audit-demo
 ```
 
 ## Project Metrics
 
-Current release: `v12.0.0`
+Current release: `v13.0.0`
 
 The project is developed incrementally, with each release introducing a production-inspired capability while maintaining full test coverage and backward compatibility.
 
-- ~4,100+ lines of Rust
-- 21 Rust modules
-- 94 integration tests
-- 12 CLI demonstrations
+- Approximately 4,100 lines of Rust
+- 22 Rust modules
+- 105 automated tests
+- 13 CLI demonstrations
 - GitHub Actions CI workflow
 - Modular architecture
 
@@ -169,6 +170,17 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Compliance-aware settlement execution
 - [x] Compliance engine CLI demo
 
+### Audit & Reporting
+
+- [x] Audit event model
+- [x] In-memory audit engine
+- [x] Settlement audit logging
+- [x] Success and failure reporting
+- [x] Events by settlement query
+- [x] Events by action query
+- [x] Events by status query
+- [x] Audit reporting CLI demo
+
 ### Policy Engine
 
 - [x] Policy decision model
@@ -204,7 +216,7 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
 - [x] Custody controls
 - [x] Policy engine
 - [x] Compliance layer
-- [ ] Audit & reporting
+- [x] Audit & reporting
 
 ### Public Blockchain Roadmap
 
@@ -259,13 +271,12 @@ Permissioned networking means that nodes do not accept every peer by default. Ea
                              │ ├── Settlement       │
                              │ │   ├── Compliance   │
                              │ │   ├── Policy       │
-                             │ │   └── Custody      │
-                             │ └── Future           │
-                             │     └── Audit        │
+                             │ │   ├── Custody      │
+                             │ │   └── Audit        │
                              └──────────────────────┘
 ```
 
-Wallets create Ed25519 keypairs and sign UTXO transactions, valid transactions enter the mempool, mining packages them into blocks, and the blockchain links blocks through hashes and proof of work. Persistence stores chain state, permissioned networking synchronizes trusted peers, and the asset layer models issuance, ownership, balances, transfers, compliance authorization, policy authorization, custody controls, and settlement execution.
+The enterprise asset flow applies compliance, policy, and custody controls before settlement execution. Successful settlement updates the asset ledger, while both successful and failed settlement attempts emit audit events for reporting and queries.
 
 ### Block Structure
 
@@ -318,15 +329,64 @@ Chain synchronization validation additionally checks:
 
 Permissioned networking additionally validates node identity against the trusted peer registry before accepting participation in the network.
 
-Compliance-aware settlement execution first checks whether both settlement participants are approved. If compliance passes, the settlement proceeds to policy validation, custody validation, and finally asset ledger balance updates.
+Enterprise settlement execution applies compliance, policy, and custody checks before settlement processing. Successful settlement updates asset ledger balances and records completed audit events; failed settlement records failed audit events without applying ledger updates.
 
-After compliance approval, settlement execution evaluates enterprise policy rules before custody validation. Current policy rules include settlement quantity limits and blocked custody accounts.
+Current policy rules include settlement quantity limits and blocked custody accounts. Current compliance rules require both settlement participants to be approved.
 
 Validation is performed during:
 
 - Local blockchain verification
 - Received block verification over the network
 - Peer chain synchronization requests and responses
+
+## Audit & Reporting
+
+Version 13 introduces an audit subsystem that records settlement activity and provides reporting APIs.
+
+### Audit Events
+
+Each audit event records:
+
+- Audit event ID
+- Settlement ID
+- Action performed
+- Result (Success / Failure)
+- Optional failure reason
+
+### Audit Engine
+
+The audit engine stores events in memory and provides read-only query APIs.
+
+Supported queries include:
+
+- Total event count
+- Success count
+- Failure count
+- Events for a settlement
+- Events by action
+- Events by status
+
+The API returns borrowed references where appropriate, avoiding unnecessary cloning of audit records.
+
+### Settlement Integration
+
+Settlement execution automatically records audit events.
+
+Successful settlement:
+
+```text
+Submitted
+Completed
+```
+
+Failed settlement:
+
+```text
+Submitted
+Failed
+```
+
+This separates settlement processing from reporting while maintaining a complete audit trail.
 
 ## Roadmap
 
@@ -373,8 +433,8 @@ v11A ✓ Policy          v11B Light
 
 v12A ✓ Compliance Layer
 
-v13A Audit &
-     Reporting
+v13A ✓ Audit &
+      Reporting
 ```
 
 ### Release Timeline
@@ -392,24 +452,18 @@ June    ✓ v1.0 Blockchain Fundamentals
         ✓ v5.0 Transaction Mempool
         ✓ v6.0 Tokio Async Networking
             ↓
-        Track A: Enterprise Digital Assets (Primary)
+        Track A: Enterprise Digital Assets
         ─────────────────────────────────
         ✓ v7A Permissioned Network
-            ↓
         ✓ v8A Asset Tokenization & Ledger
-            ↓
         ✓ v9A Settlement Engine
-            ↓
         ✓ v10A Custody Controls
-            ↓
         ✓ v11A Policy Engine
-            ↓
         ✓ v12A Compliance Layer
-            ↓
-        v13A Audit & Reporting
+        ✓ v13A Audit & Reporting
 
-        Track B: Public Blockchain (Secondary)
-        ──────────────────────────────────────
+        Track B: Public Blockchain 
+        ──────────────────────────────────
         v7B Difficulty Adjustment
             ↓
         v8B Mining Rewards & Fees
@@ -418,7 +472,7 @@ July    v9B Fork Handling
             ↓
         v10B Smart Contracts
             ↓
-      v11B Light Clients (SPV)
+        v11B Light Clients (SPV)
 ```
 
 ## Limitations
@@ -427,7 +481,6 @@ This implementation is still evolving. The current codebase intentionally omits 
 
 ### Current Gaps
 
-- No audit/reporting layer yet
 - No smart contracts or advanced consensus features yet
 
 ### Prototype Simplifications
@@ -447,7 +500,18 @@ Run the full test suite with:
 cargo test
 ```
 
-Current test suite includes 94 integration tests covering:
+Current release validation includes:
+
+- 105 automated tests
+- `cargo fmt`
+- `cargo check`
+- `cargo clippy`
+- `custody-demo`
+- `policy-demo`
+- `compliance-demo`
+- `audit-demo`
+
+Automated test coverage includes:
 
 ### Blockchain Validation
 
@@ -563,6 +627,19 @@ Current test suite includes 94 integration tests covering:
 - Sender and receiver compliance checks
 - Compliance-aware settlement execution
 
+### Audit & Reporting
+
+- Audit event creation
+- Audit event success and failure classification
+- Audit engine event recording
+- Latest audit event lookup
+- Success and failure count reporting
+- Events by settlement query
+- Events by action query
+- Events by status query
+- Successful settlement audit logging
+- Failed settlement audit logging
+
 ## Repository Structure
 
 - `src/block.rs` - proof-of-work block type and block-level validation
@@ -572,6 +649,7 @@ Current test suite includes 94 integration tests covering:
 - `src/custody.rs` - custody account model, custody registry, account lifecycle state, and custody control queries
 - `src/policy.rs` - policy decision model, settlement authorization rules, and policy-aware settlement checks
 - `src/compliance.rs` - compliance decision model, approved participant registry, and participant eligibility checks
+- `src/audit.rs` - audit event model, in-memory audit engine, and reporting query APIs
 - `src/merkle.rs` - Merkle hashing helpers
 - `src/network_message.rs` - protocol messages exchanged between peers
 - `src/node_identity.rs` - permissioned node identity and network roles
@@ -585,7 +663,7 @@ Current test suite includes 94 integration tests covering:
 - `src/wallet.rs` - Ed25519 wallet/keypair handling
 - `src/storage.rs` - JSON-based blockchain persistence helpers
 - `src/mempool.rs` - in-memory pending transaction pool
-- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, asset tokenization, settlement behavior, custody controls, policy engine behavior, and compliance behavior
+- `tests/blockchain_tests.rs` - integration coverage for blockchain, synchronization, persistence, mempool, async networking, permissioned networking, asset tokenization, settlement behavior, custody controls, policy engine behavior, compliance behavior, and audit/reporting behavior
 
 ## Technologies
 
@@ -638,6 +716,9 @@ The current implementation includes:
 - Asset transfer processing
 - Compliance-based participant eligibility and authorization
 - Approved participant registry
+- Audit event model
+- Settlement audit logging
+- Audit reporting queries
 - Custody account lifecycle controls
 - Settlement instruction model
 - Settlement lifecycle state
@@ -655,7 +736,7 @@ The implementation prioritizes readability, correctness, modularity, and increme
 
 The project is suitable for architectural review, technical discussion, and continued engineering development, but it is not intended for production deployment.
 
-The current implementation includes compliance-based participant eligibility and authorization and policy-driven settlement authorization. Future releases will extend this foundation with audit/reporting capabilities.
+The current implementation includes compliance-based participant eligibility and authorization, policy-driven settlement authorization, and audit/reporting capabilities.
 
 ## References
 

@@ -1,4 +1,5 @@
 use crate::asset::{AssetLedger, AssetTransfer};
+use crate::audit::{AuditAction, AuditEngine, AuditEvent, AuditStatus};
 use crate::compliance::{ComplianceDecision, ComplianceEngine};
 use crate::custody::CustodyRegistry;
 use crate::policy::{PolicyDecision, PolicyEngine};
@@ -297,5 +298,51 @@ impl SettlementEngine {
         }
 
         self.execute_settlement_with_custody(settlement_id, ledger, custody_registry)
+    }
+
+    pub fn execute_settlement_with_compliance_and_audit(
+        &mut self,
+        settlement_id: &str,
+        ledger: &mut AssetLedger,
+        custody_registry: &CustodyRegistry,
+        policy_engine: &PolicyEngine,
+        compliance_engine: &ComplianceEngine,
+        audit_engine: &mut AuditEngine,
+    ) -> bool {
+        audit_engine.record_event(AuditEvent::new(
+            format!("audit-{settlement_id}-submitted"),
+            settlement_id.to_string(),
+            AuditAction::SettlementSubmitted,
+            AuditStatus::Success,
+            None,
+        ));
+
+        let executed = self.execute_settlement_with_compliance(
+            settlement_id,
+            ledger,
+            custody_registry,
+            policy_engine,
+            compliance_engine,
+        );
+
+        if executed {
+            audit_engine.record_event(AuditEvent::new(
+                format!("audit-{settlement_id}-completed"),
+                settlement_id.to_string(),
+                AuditAction::SettlementCompleted,
+                AuditStatus::Success,
+                None,
+            ));
+        } else {
+            audit_engine.record_event(AuditEvent::new(
+                format!("audit-{settlement_id}-failed"),
+                settlement_id.to_string(),
+                AuditAction::SettlementFailed,
+                AuditStatus::Failure,
+                Some("settlement rejected".to_string()),
+            ));
+        }
+
+        executed
     }
 }
