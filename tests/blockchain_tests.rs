@@ -2704,3 +2704,140 @@ fn settlement_engine_records_audit_events_for_failed_settlement() {
     assert_eq!(events[1].status, AuditStatus::Failure);
     assert_eq!(events[1].reason, Some("settlement rejected".to_string()));
 }
+
+#[test]
+fn audit_engine_counts_success_and_failure_events() {
+    let mut engine = AuditEngine::new();
+
+    engine.record_event(AuditEvent::new(
+        "audit-001".to_string(),
+        "settlement-001".to_string(),
+        AuditAction::SettlementSubmitted,
+        AuditStatus::Success,
+        None,
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-002".to_string(),
+        "settlement-001".to_string(),
+        AuditAction::SettlementCompleted,
+        AuditStatus::Success,
+        None,
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-003".to_string(),
+        "settlement-002".to_string(),
+        AuditAction::SettlementFailed,
+        AuditStatus::Failure,
+        Some("settlement rejected".to_string()),
+    ));
+
+    assert_eq!(engine.success_count(), 2);
+    assert_eq!(engine.failure_count(), 1);
+}
+
+#[test]
+fn audit_engine_returns_events_for_settlement() {
+    let mut engine = AuditEngine::new();
+
+    engine.record_event(AuditEvent::new(
+        "audit-001".to_string(),
+        "settlement-001".to_string(),
+        AuditAction::SettlementSubmitted,
+        AuditStatus::Success,
+        None,
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-002".to_string(),
+        "settlement-001".to_string(),
+        AuditAction::SettlementCompleted,
+        AuditStatus::Success,
+        None,
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-003".to_string(),
+        "settlement-002".to_string(),
+        AuditAction::SettlementFailed,
+        AuditStatus::Failure,
+        Some("settlement rejected".to_string()),
+    ));
+
+    let events = engine.events_for_settlement("settlement-001");
+
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].event_id, "audit-001");
+    assert_eq!(events[1].event_id, "audit-002");
+}
+
+#[test]
+fn audit_engine_returns_events_by_action() {
+    let mut engine = AuditEngine::new();
+
+    engine.record_event(AuditEvent::new(
+        "audit-001".to_string(),
+        "settlement-001".to_string(),
+        AuditAction::SettlementSubmitted,
+        AuditStatus::Success,
+        None,
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-002".to_string(),
+        "settlement-002".to_string(),
+        AuditAction::SettlementSubmitted,
+        AuditStatus::Success,
+        None,
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-003".to_string(),
+        "settlement-003".to_string(),
+        AuditAction::SettlementFailed,
+        AuditStatus::Failure,
+        Some("settlement rejected".to_string()),
+    ));
+
+    let submitted = engine.events_by_action(&AuditAction::SettlementSubmitted);
+
+    assert_eq!(submitted.len(), 2);
+    assert_eq!(submitted[0].event_id, "audit-001");
+    assert_eq!(submitted[1].event_id, "audit-002");
+}
+
+#[test]
+fn audit_engine_returns_events_by_status() {
+    let mut engine = AuditEngine::new();
+
+    engine.record_event(AuditEvent::new(
+        "audit-001".to_string(),
+        "settlement-001".to_string(),
+        AuditAction::SettlementSubmitted,
+        AuditStatus::Success,
+        None,
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-002".to_string(),
+        "settlement-002".to_string(),
+        AuditAction::SettlementFailed,
+        AuditStatus::Failure,
+        Some("policy rejected settlement".to_string()),
+    ));
+
+    engine.record_event(AuditEvent::new(
+        "audit-003".to_string(),
+        "settlement-003".to_string(),
+        AuditAction::PolicyRejected,
+        AuditStatus::Failure,
+        Some("policy rejected settlement".to_string()),
+    ));
+
+    let failures = engine.events_by_status(&AuditStatus::Failure);
+
+    assert_eq!(failures.len(), 2);
+    assert_eq!(failures[0].event_id, "audit-002");
+    assert_eq!(failures[1].event_id, "audit-003");
+}

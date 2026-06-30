@@ -81,4 +81,39 @@ impl AuditEngine {
     pub fn latest_event(&self) -> Option<&AuditEvent> {
         self.events.last()
     }
+
+    pub fn success_count(&self) -> usize {
+        self.events
+            .iter()
+            .filter(|event| event.status == AuditStatus::Success)
+            .count()
+    }
+
+    pub fn failure_count(&self) -> usize {
+        self.events
+            .iter()
+            .filter(|event| event.status == AuditStatus::Failure)
+            .count()
+    }
+
+    pub fn events_for_settlement(&self, settlement_id: &str) -> Vec<&AuditEvent> {
+        self.events
+            .iter()
+            .filter(|event| event.settlement_id == settlement_id)
+            .collect()
+    }
+
+    pub fn events_by_action(&self, action: &AuditAction) -> Vec<&AuditEvent> {
+        self.events
+            .iter()
+            .filter(|event| &event.action == action)
+            .collect()
+    }
+
+    pub fn events_by_status(&self, status: &AuditStatus) -> Vec<&AuditEvent> {
+        self.events
+            .iter()
+            .filter(|event| &event.status == status)
+            .collect()
+    }
 }
