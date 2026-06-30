@@ -55,3 +55,30 @@ impl AuditEvent {
         self.status == AuditStatus::Failure
     }
 }
+
+#[derive(Debug, Default)]
+pub struct AuditEngine {
+    events: Vec<AuditEvent>,
+}
+
+impl AuditEngine {
+    pub fn new() -> Self {
+        Self { events: Vec::new() }
+    }
+
+    pub fn events(&self) -> &[AuditEvent] {
+        &self.events
+    }
+
+    pub fn record_event(&mut self, event: AuditEvent) {
+        self.events.push(event);
+    }
+
+    pub fn event_count(&self) -> usize {
+        self.events.len()
+    }
+
+    pub fn latest_event(&self) -> Option<&AuditEvent> {
+        self.events.last()
+    }
+}
