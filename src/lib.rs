@@ -2,6 +2,8 @@
 pub mod asset;
 /// Tokio-based asynchronous networking helpers.
 pub mod async_network;
+/// Audit event model and rporting primitives for settlement traceability.
+pub mod audit;
 /// Proof-of-work block type and block-level validation.
 pub mod block;
 /// Blockchain container and chain-wide validation rules.

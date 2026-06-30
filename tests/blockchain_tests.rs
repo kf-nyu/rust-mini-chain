@@ -2,6 +2,7 @@ use digital_asset_ledger::asset::{
     Asset, AssetIssuance, AssetLedger, AssetOwnership, AssetTransfer, AssetType,
 };
 use digital_asset_ledger::async_network;
+use digital_asset_ledger::audit::{AuditAction, AuditEvent, AuditStatus};
 use digital_asset_ledger::blockchain::Blockchain;
 use digital_asset_ledger::compliance::{ComplianceDecision, ComplianceEngine};
 use digital_asset_ledger::custody::{CustodyAccount, CustodyAccountStatus, CustodyRegistry};
@@ -2479,4 +2480,42 @@ fn settlement_engine_rejects_settlement_with_unapproved_receiver() {
     assert_eq!(failed.status, SettlementStatus::Failed);
     assert_eq!(ledger.balance_of("asset-001", "alice-custody"), 2_000);
     assert_eq!(ledger.balance_of("asset-001", "bob-custody"), 0);
+}
+
+#[test]
+fn audit_event_records_successful_settlement_action() {
+    let event = AuditEvent::new(
+        "audit-001".to_string(),
+        "settlement-001".to_string(),
+        AuditAction::SettlementCompleted,
+        AuditStatus::Success,
+        None,
+    );
+
+    assert_eq!(event.event_id, "audit-001");
+    assert_eq!(event.settlement_id, "settlement-001");
+    assert_eq!(event.action, AuditAction::SettlementCompleted);
+    assert_eq!(event.status, AuditStatus::Success);
+    assert_eq!(event.reason, None);
+    assert!(event.is_success());
+    assert!(!event.is_failure());
+}
+
+#[test]
+fn audit_event_records_failed_settlement_action_with_reason() {
+    let event = AuditEvent::new(
+        "audit-002".to_string(),
+        "settlement-002".to_string(),
+        AuditAction::ComplianceRejected,
+        AuditStatus::Failure,
+        Some("sender is not approved".to_string()),
+    );
+
+    assert_eq!(event.event_id, "audit-002");
+    assert_eq!(event.settlement_id, "settlement-002");
+    assert_eq!(event.action, AuditAction::ComplianceRejected);
+    assert_eq!(event.status, AuditStatus::Failure);
+    assert_eq!(event.reason, Some("sender is not approved".to_string()));
+    assert!(!event.is_success());
+    assert!(event.is_failure());
 }
